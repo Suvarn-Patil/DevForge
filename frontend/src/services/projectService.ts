@@ -35,3 +35,19 @@ export const createProject = async (
 
   return response.data;
 };
+export const getProjectTasks = async (
+  projectId: string
+) => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/${projectId}/tasks`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};

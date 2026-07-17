@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import {
   getProjects,
   createProject,
@@ -9,6 +11,8 @@ export default function Projects() {
   const [name, setName] = useState("");
   const [description, setDescription] =
     useState("");
+
+  const navigate = useNavigate();
 
   const fetchProjects = async () => {
     try {
@@ -70,7 +74,7 @@ export default function Projects() {
 
         <button
           onClick={handleCreate}
-          className="rounded-lg bg-blue-600 px-5 py-3 text-white"
+          className="rounded-lg bg-blue-600 px-5 py-3 text-white hover:bg-blue-500"
         >
           Create Project
         </button>
@@ -80,7 +84,12 @@ export default function Projects() {
         {projects.map((project) => (
           <div
             key={project._id}
-            className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
+            onClick={() =>
+              navigate(
+                `/projects/${project._id}`
+              )
+            }
+            className="cursor-pointer rounded-2xl border border-zinc-800 bg-zinc-900 p-6 transition hover:border-blue-500"
           >
             <h2 className="text-2xl font-bold text-white">
               {project.name}
@@ -88,6 +97,10 @@ export default function Projects() {
 
             <p className="mt-3 text-zinc-400">
               {project.description}
+            </p>
+
+            <p className="mt-4 text-sm text-blue-400">
+              View Project →
             </p>
           </div>
         ))}
