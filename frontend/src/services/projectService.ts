@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/projects";
+const API_URL =
+  "https://devforge-api-i5j5.onrender.com/api/projects";
 
 export const getProjects = async () => {
   const token = localStorage.getItem("token");
@@ -35,13 +36,14 @@ export const createProject = async (
 
   return response.data;
 };
+
 export const getProjectTasks = async (
   projectId: string
 ) => {
   const token = localStorage.getItem("token");
 
   const response = await axios.get(
-    `${API_URL}/${projectId}/tasks`,
+    `https://devforge-api-i5j5.onrender.com/api/tasks/project/${projectId}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

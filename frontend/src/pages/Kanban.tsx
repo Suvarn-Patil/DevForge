@@ -5,7 +5,7 @@ import Topbar from "../components/dashboard/Topbar";
 import KanbanColumn from "../components/kanban/KanbanColumn";
 import CreateTaskModal from "../components/kanban/CreateTaskModal";
 
-import { getTasks } from "../services/authService";
+import { getTasks } from "../services/taskService";
 
 export default function Kanban() {
   const [tasks, setTasks] = useState<any[]>([]);

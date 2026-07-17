@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/auth";
+const API_URL =
+  "https://devforge-api-i5j5.onrender.com/api/auth";
 
 export const registerUser = async (
   name: string,
@@ -39,23 +40,6 @@ export const getCurrentUser = async () => {
 
   const response = await axios.get(
     `${API_URL}/me`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  return response.data;
-};
-
-export const getTasks = async () => {
-  const token = localStorage.getItem("token");
-
-  console.log("TOKEN:", token);
-
-  const response = await axios.get(
-    "http://localhost:5000/api/tasks",
     {
       headers: {
         Authorization: `Bearer ${token}`,

@@ -1,6 +1,19 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/tasks";
+const API_URL =
+  "https://devforge-api-i5j5.onrender.com/api/tasks";
+
+export const getTasks = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(API_URL, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};
 
 export const createTask = async (
   title: string,
@@ -26,6 +39,7 @@ export const createTask = async (
 
   return response.data;
 };
+
 export const updateTaskStatus = async (
   taskId: string,
   status: string
@@ -33,7 +47,7 @@ export const updateTaskStatus = async (
   const token = localStorage.getItem("token");
 
   const response = await axios.patch(
-    `http://localhost:5000/api/tasks/${taskId}`,
+    `${API_URL}/${taskId}`,
     { status },
     {
       headers: {

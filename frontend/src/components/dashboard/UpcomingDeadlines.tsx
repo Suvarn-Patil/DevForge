@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getTasks } from "../../services/authService";
+import { getTasks } from "../../services/taskService";
 
 export default function UpcomingDeadlines() {
   const [tasks, setTasks] = useState<any[]>([]);

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 import { getProjects } from "../../services/projectService";
-import { getTasks } from "../../services/authService";
+import { getTasks } from "../../services/taskService";
 
 export default function OverviewCards() {
   const [projectCount, setProjectCount] =
