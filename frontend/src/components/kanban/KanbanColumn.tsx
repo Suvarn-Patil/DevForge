@@ -34,8 +34,7 @@ export default function KanbanColumn({
 ) => {
   try {
     await updateTaskStatus(taskId, status);
-
-    console.log("Task updated");
+    window.location.reload();
   } catch (error) {
     console.error(error);
   }
