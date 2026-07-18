@@ -29,16 +29,17 @@ export default function KanbanColumn({
   tasks,
 }: Props) {
   const handleStatusChange = async (
-    taskId: string,
-    status: string
-  ) => {
-    try {
-      await updateTaskStatus(taskId, status);
-      window.location.reload();
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  taskId: string,
+  status: string
+) => {
+  try {
+    await updateTaskStatus(taskId, status);
+
+    console.log("Task updated");
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
