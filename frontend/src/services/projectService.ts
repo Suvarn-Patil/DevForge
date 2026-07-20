@@ -43,7 +43,7 @@ export const getProjectTasks = async (
   const token = localStorage.getItem("token");
 
   const response = await axios.get(
-    `https://devforge-api-i5j5.onrender.com/api/tasks/project/${projectId}`,
+    `${API_URL}/${projectId}/tasks`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
