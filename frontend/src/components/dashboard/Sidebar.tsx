@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
+  FolderKanban,
   KanbanSquare,
   Bot,
   User,
@@ -12,6 +13,11 @@ const menu = [
     icon: LayoutDashboard,
     name: "Dashboard",
     path: "/dashboard",
+  },
+  {
+    icon: FolderKanban,
+    name: "Projects",
+    path: "/projects",
   },
   {
     icon: KanbanSquare,
@@ -38,17 +44,13 @@ const menu = [
 export default function Sidebar() {
   return (
     <aside className="flex h-screen w-72 flex-col border-r border-zinc-800 bg-zinc-950">
-
       <div className="border-b border-zinc-800 p-6">
-
         <h1 className="text-3xl font-bold text-blue-500">
           DevForge
         </h1>
-
       </div>
 
       <div className="mt-8 flex flex-col gap-2 px-4">
-
         {menu.map((item) => (
           <Link
             key={item.name}
@@ -59,9 +61,7 @@ export default function Sidebar() {
             {item.name}
           </Link>
         ))}
-
       </div>
-
     </aside>
   );
 }
