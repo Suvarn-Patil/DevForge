@@ -71,3 +71,22 @@ export const updateTaskStatus = async (
     });
   }
 };
+
+export const deleteTask = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    await Task.findByIdAndDelete(
+      req.params.id
+    );
+
+    res.json({
+      message: "Task deleted",
+    });
+  } catch {
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+};

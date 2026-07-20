@@ -1,4 +1,7 @@
-import { updateTaskStatus } from "../../services/taskService";
+import {
+  updateTaskStatus,
+  deleteTask,
+} from "../../services/taskService";
 
 type Task = {
   id: string;
@@ -29,16 +32,32 @@ export default function KanbanColumn({
   tasks,
 }: Props) {
   const handleStatusChange = async (
-  taskId: string,
-  status: string
-) => {
-  try {
-    await updateTaskStatus(taskId, status);
-    window.location.reload();
-  } catch (error) {
-    console.error(error);
-  }
-};
+    taskId: string,
+    status: string
+  ) => {
+    try {
+      await updateTaskStatus(
+        taskId,
+        status
+      );
+
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async (
+    taskId: string
+  ) => {
+    try {
+      await deleteTask(taskId);
+
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
@@ -91,7 +110,9 @@ export default function KanbanColumn({
                 </button>
               )}
 
-              {title.includes("In Progress") && (
+              {title.includes(
+                "In Progress"
+              ) && (
                 <button
                   onClick={() =>
                     handleStatusChange(
@@ -118,6 +139,15 @@ export default function KanbanColumn({
                   Complete
                 </button>
               )}
+
+              <button
+                onClick={() =>
+                  handleDelete(task.id)
+                }
+                className="mt-2 w-full rounded-lg bg-red-600 py-2 text-white hover:bg-red-500"
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}

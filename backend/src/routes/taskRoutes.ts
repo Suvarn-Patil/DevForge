@@ -4,6 +4,7 @@ import {
   createTask,
   getTasks,
   updateTaskStatus,
+  deleteTask,
 } from "../controllers/taskController";
 
 import {
@@ -28,6 +29,12 @@ router.patch(
   "/:id",
   protect,
   updateTaskStatus
+);
+
+router.delete(
+  "/:id",
+  protect,
+  deleteTask
 );
 
 export default router;
