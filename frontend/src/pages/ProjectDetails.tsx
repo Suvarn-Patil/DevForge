@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { getProjectTasks } from "../services/projectService";
-import { createTask } from "../services/taskService";
+import {
+  createTask,
+  deleteTask,
+} from "../services/taskService";
 
 export default function ProjectDetails() {
   const { id } = useParams();
@@ -42,6 +45,17 @@ export default function ProjectDetails() {
 
         setTitle("");
         setDescription("");
+
+        fetchTasks();
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+  const handleDeleteTask =
+    async (taskId: string) => {
+      try {
+        await deleteTask(taskId);
 
         fetchTasks();
       } catch (error) {
@@ -107,6 +121,17 @@ export default function ProjectDetails() {
                 {task.priority}
               </span>
             </div>
+
+            <button
+              onClick={() =>
+                handleDeleteTask(
+                  task._id
+                )
+              }
+              className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-500"
+            >
+              Delete
+            </button>
           </div>
         ))}
       </div>
