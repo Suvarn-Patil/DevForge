@@ -1,21 +1,20 @@
 import OpenAI from "openai";
 
-const apiKey = process.env.OPENAI_API_KEY;
-
-const client = apiKey
-  ? new OpenAI({
-      apiKey,
-    })
-  : null;
-
 export const generateAIResponse = async (
   message: string
 ) => {
-  if (!client) {
+  const apiKey =
+    process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
     throw new Error(
       "OPENAI_API_KEY is not configured"
     );
   }
+
+  const client = new OpenAI({
+    apiKey,
+  });
 
   const response =
     await client.responses.create({
