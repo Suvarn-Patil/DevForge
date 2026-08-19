@@ -12,11 +12,9 @@ import {
   deleteTask,
 } from "../../services/taskService";
 
-type Status =
-  | "todo"
-  | "inprogress"
-  | "review"
-  | "done";
+import type {
+  KanbanStatus,
+} from "../../pages/Kanban";
 
 type Task = {
   id: string;
@@ -35,7 +33,22 @@ type Task = {
 type Props = {
   title: string;
 
+  status: KanbanStatus;
+
   tasks: Task[];
+
+  updatingTaskId:
+    | string
+    | null;
+
+  onStatusChange: (
+    taskId: string,
+    status: KanbanStatus
+  ) => void;
+
+  onUpdatingTask: (
+    taskId: string | null
+  ) => void;
 };
 
 /* ================================
@@ -57,11 +70,38 @@ function priorityColor(
   }
 }
 
+/* ================================
+   STATUS LABEL
+================================ */
+
+function statusLabel(
+  status: KanbanStatus
+) {
+  switch (status) {
+    case "todo":
+      return "Todo";
+
+    case "inprogress":
+      return "In Progress";
+
+    case "review":
+      return "Review";
+
+    case "done":
+      return "Done";
+  }
+}
+
 export default function KanbanColumn({
   title,
+  status,
   tasks,
+  updatingTaskId,
+  onStatusChange,
+  onUpdatingTask,
 }: Props) {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
   const [editingTask, setEditingTask] =
     useState<Task | null>(null);
@@ -84,32 +124,126 @@ export default function KanbanColumn({
   const [saving, setSaving] =
     useState(false);
 
-  /* ================================
-     STATUS CHANGE
-  ================================ */
+  const [
+    dragOver,
+    setDragOver,
+  ] = useState(false);
 
-  const handleStatusChange = async (
-    taskId: string,
-    status: Status
+  /* ================================
+     DRAG START
+  ================================= */
+
+  const handleDragStart = (
+    event: React.DragEvent,
+    taskId: string
   ) => {
+    event.dataTransfer.setData(
+      "text/task-id",
+      taskId
+    );
+
+    event.dataTransfer.effectAllowed =
+      "move";
+  };
+
+  /* ================================
+     DRAG OVER
+  ================================= */
+
+  const handleDragOver = (
+    event: React.DragEvent
+  ) => {
+    event.preventDefault();
+
+    event.dataTransfer.dropEffect =
+      "move";
+
+    setDragOver(true);
+  };
+
+  /* ================================
+     DRAG LEAVE
+  ================================= */
+
+  const handleDragLeave = () => {
+    setDragOver(false);
+  };
+
+  /* ================================
+     DROP
+  ================================= */
+
+  const handleDrop = async (
+    event: React.DragEvent
+  ) => {
+    event.preventDefault();
+
+    setDragOver(false);
+
+    const taskId =
+      event.dataTransfer.getData(
+        "text/task-id"
+      );
+
+    if (!taskId) {
+      return;
+    }
+
     try {
+      onUpdatingTask(taskId);
+
       await updateTaskStatus(
         taskId,
         status
       );
 
-      window.location.reload();
+      onStatusChange(
+        taskId,
+        status
+      );
     } catch (error) {
       console.error(
         "Failed to update task status:",
         error
       );
+    } finally {
+      onUpdatingTask(null);
+    }
+  };
+
+  /* ================================
+     BUTTON STATUS CHANGE
+  ================================= */
+
+  const handleStatusChange = async (
+    taskId: string,
+    nextStatus: KanbanStatus
+  ) => {
+    try {
+      onUpdatingTask(taskId);
+
+      await updateTaskStatus(
+        taskId,
+        nextStatus
+      );
+
+      onStatusChange(
+        taskId,
+        nextStatus
+      );
+    } catch (error) {
+      console.error(
+        "Failed to update task status:",
+        error
+      );
+    } finally {
+      onUpdatingTask(null);
     }
   };
 
   /* ================================
      DELETE
-  ================================ */
+  ================================= */
 
   const handleDelete = async (
     taskId: string
@@ -124,6 +258,8 @@ export default function KanbanColumn({
     }
 
     try {
+      onUpdatingTask(taskId);
+
       await deleteTask(taskId);
 
       window.location.reload();
@@ -132,19 +268,23 @@ export default function KanbanColumn({
         "Failed to delete task:",
         error
       );
+
+      onUpdatingTask(null);
     }
   };
 
   /* ================================
      OPEN EDIT
-  ================================ */
+  ================================= */
 
   const handleEditOpen = (
     task: Task
   ) => {
     setEditingTask(task);
 
-    setEditTitle(task.title);
+    setEditTitle(
+      task.title
+    );
 
     setEditDescription(
       task.description || ""
@@ -160,7 +300,7 @@ export default function KanbanColumn({
 
   /* ================================
      SAVE EDIT
-  ================================ */
+  ================================= */
 
   const handleEditSave =
     async () => {
@@ -203,39 +343,82 @@ export default function KanbanColumn({
     };
 
   /* ================================
-     OPEN TASK DETAILS
-  ================================ */
+     OPEN TASK
+  ================================= */
 
   const handleOpenTask = (
     taskId: string
   ) => {
-    navigate(`/tasks/${taskId}`);
+    navigate(
+      `/tasks/${taskId}`
+    );
   };
+
+  /* ================================
+     RENDER
+  ================================= */
 
   return (
     <>
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+      <div
+        onDragOver={
+          handleDragOver
+        }
+        onDragLeave={
+          handleDragLeave
+        }
+        onDrop={handleDrop}
+        className={`rounded-2xl border p-5 transition ${
+          dragOver
+            ? "border-blue-500 bg-blue-500/5"
+            : "border-zinc-800 bg-zinc-900"
+        }`}
+      >
 
-        <h2 className="mb-5 text-xl font-bold text-white">
-          {title}
-        </h2>
+        {/* COLUMN HEADER */}
+
+        <div className="mb-5 flex items-center justify-between">
+
+          <h2 className="text-xl font-bold text-white">
+            {title}
+          </h2>
+
+          {dragOver && (
+            <span className="text-xs font-medium text-blue-400">
+              Drop here
+            </span>
+          )}
+
+        </div>
+
+        {/* TASKS */}
 
         <div className="space-y-5">
 
           {tasks.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-800 p-6 text-center text-sm text-zinc-500">
-              No tasks
+              {dragOver
+                ? "Drop task here"
+                : "No tasks"}
             </div>
           ) : (
             tasks.map((task) => (
+
               <div
                 key={task.id}
+                draggable
+                onDragStart={(event) =>
+                  handleDragStart(
+                    event,
+                    task.id
+                  )
+                }
                 onClick={() =>
                   handleOpenTask(
                     task.id
                   )
                 }
-                className="cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-blue-500"
+                className="cursor-grab rounded-xl border border-zinc-800 bg-zinc-950 p-5 transition hover:border-blue-500 active:cursor-grabbing"
               >
 
                 {/* HEADER */}
@@ -278,20 +461,27 @@ export default function KanbanColumn({
                   </span>
                 </div>
 
+                {/* UPDATING */}
+
+                {updatingTaskId ===
+                  task.id && (
+                  <div className="mt-3 text-xs text-blue-400">
+                    Updating...
+                  </div>
+                )}
+
                 {/* ACTIONS */}
 
                 <div
                   className="mt-4 space-y-2"
-                  onClick={(e) =>
-                    e.stopPropagation()
+                  onClick={(event) =>
+                    event.stopPropagation()
                   }
                 >
 
-                  {/* TODO → IN PROGRESS */}
+                  {/* MOVE BUTTON */}
 
-                  {title.includes(
-                    "Todo"
-                  ) && (
+                  {status === "todo" && (
                     <button
                       onClick={() =>
                         handleStatusChange(
@@ -299,17 +489,18 @@ export default function KanbanColumn({
                           "inprogress"
                         )
                       }
-                      className="w-full rounded-lg bg-blue-600 py-2 text-white hover:bg-blue-500"
+                      disabled={
+                        updatingTaskId ===
+                        task.id
+                      }
+                      className="w-full rounded-lg bg-blue-600 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
                     >
                       Start
                     </button>
                   )}
 
-                  {/* IN PROGRESS → REVIEW */}
-
-                  {title.includes(
-                    "In Progress"
-                  ) && (
+                  {status ===
+                    "inprogress" && (
                     <button
                       onClick={() =>
                         handleStatusChange(
@@ -317,17 +508,18 @@ export default function KanbanColumn({
                           "review"
                         )
                       }
-                      className="w-full rounded-lg bg-yellow-600 py-2 text-white hover:bg-yellow-500"
+                      disabled={
+                        updatingTaskId ===
+                        task.id
+                      }
+                      className="w-full rounded-lg bg-yellow-600 py-2 text-white hover:bg-yellow-500 disabled:opacity-50"
                     >
                       Send to Review
                     </button>
                   )}
 
-                  {/* REVIEW → DONE */}
-
-                  {title.includes(
-                    "Review"
-                  ) && (
+                  {status ===
+                    "review" && (
                     <button
                       onClick={() =>
                         handleStatusChange(
@@ -335,7 +527,11 @@ export default function KanbanColumn({
                           "done"
                         )
                       }
-                      className="w-full rounded-lg bg-green-600 py-2 text-white hover:bg-green-500"
+                      disabled={
+                        updatingTaskId ===
+                        task.id
+                      }
+                      className="w-full rounded-lg bg-green-600 py-2 text-white hover:bg-green-500 disabled:opacity-50"
                     >
                       Complete
                     </button>
@@ -345,7 +541,9 @@ export default function KanbanColumn({
 
                   <button
                     onClick={() =>
-                      handleEditOpen(task)
+                      handleEditOpen(
+                        task
+                      )
                     }
                     className="w-full rounded-lg bg-zinc-700 py-2 text-white hover:bg-zinc-600"
                   >
@@ -360,7 +558,11 @@ export default function KanbanColumn({
                         task.id
                       )
                     }
-                    className="w-full rounded-lg bg-red-600 py-2 text-white hover:bg-red-500"
+                    disabled={
+                      updatingTaskId ===
+                      task.id
+                    }
+                    className="w-full rounded-lg bg-red-600 py-2 text-white hover:bg-red-500 disabled:opacity-50"
                   >
                     Delete
                   </button>
@@ -368,6 +570,7 @@ export default function KanbanColumn({
                 </div>
 
               </div>
+
             ))
           )}
 
@@ -375,7 +578,9 @@ export default function KanbanColumn({
 
       </div>
 
-      {/* EDIT MODAL */}
+      {/* ================================
+          EDIT MODAL
+      ================================= */}
 
       {editingTask && (
         <div
@@ -387,8 +592,8 @@ export default function KanbanColumn({
 
           <div
             className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl"
-            onClick={(e) =>
-              e.stopPropagation()
+            onClick={(event) =>
+              event.stopPropagation()
             }
           >
 
@@ -417,9 +622,9 @@ export default function KanbanColumn({
 
             <input
               value={editTitle}
-              onChange={(e) =>
+              onChange={(event) =>
                 setEditTitle(
-                  e.target.value
+                  event.target.value
                 )
               }
               className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none focus:border-blue-500"
@@ -432,10 +637,12 @@ export default function KanbanColumn({
             </label>
 
             <textarea
-              value={editDescription}
-              onChange={(e) =>
+              value={
+                editDescription
+              }
+              onChange={(event) =>
                 setEditDescription(
-                  e.target.value
+                  event.target.value
                 )
               }
               rows={4}
@@ -449,10 +656,12 @@ export default function KanbanColumn({
             </label>
 
             <select
-              value={editPriority}
-              onChange={(e) =>
+              value={
+                editPriority
+              }
+              onChange={(event) =>
                 setEditPriority(
-                  e.target.value as
+                  event.target.value as
                     | "low"
                     | "medium"
                     | "high"
@@ -460,7 +669,6 @@ export default function KanbanColumn({
               }
               className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3 text-white outline-none"
             >
-
               <option value="low">
                 Low
               </option>
@@ -472,7 +680,6 @@ export default function KanbanColumn({
               <option value="high">
                 High
               </option>
-
             </select>
 
             {/* BUTTONS */}
