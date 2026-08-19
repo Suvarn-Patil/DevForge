@@ -194,7 +194,12 @@ export const updateTask = async (
       });
     }
 
-    const updates: any = {};
+    const updates: {
+      title?: string;
+      description?: string;
+      priority?: "low" | "medium" | "high";
+      assignee?: string | null;
+    } = {};
 
     if (title !== undefined) {
       updates.title = title;

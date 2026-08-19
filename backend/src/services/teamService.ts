@@ -7,6 +7,10 @@ type TeamRole =
   | "member"
   | "viewer";
 
+interface TeamObject {
+  toObject: () => Record<string, unknown>;
+}
+
 export const createTeam = async (
   name: string,
   owner: string
@@ -28,16 +32,43 @@ export const createTeam = async (
 export const getTeamsForUser = async (
   userId: string
 ) => {
-  const memberships = await TeamMember.find({
-    user: userId,
-  }).populate("team");
+  const memberships =
+    await TeamMember.find({
+      user: userId,
+    }).populate("team");
 
   return memberships
-    .filter((membership) => membership.team)
-    .map((membership) => ({
-      ...(membership.team as any).toObject(),
-      role: membership.role,
-    }));
+    .filter(
+      (membership) => membership.team
+    )
+    .map((membership) => {
+      const team =
+        membership.team as unknown;
+
+      if (
+        typeof team !== "object" ||
+        team === null ||
+        !("toObject" in team) ||
+        typeof team.toObject !== "function"
+      ) {
+        return null;
+      }
+
+      const teamObject =
+        (team as TeamObject).toObject();
+
+      return {
+        ...teamObject,
+        role: membership.role,
+      };
+    })
+    .filter(
+      (
+        team
+      ): team is Record<string, unknown> & {
+        role: TeamRole;
+      } => team !== null
+    );
 };
 
 export const getTeamById = async (
@@ -54,18 +85,20 @@ export const getTeamById = async (
     return null;
   }
 
-  const team = await Team.findById(teamId);
+  const team =
+    await Team.findById(teamId);
 
   if (!team) {
     return null;
   }
 
-  const members = await TeamMember.find({
-    team: teamId,
-  }).populate(
-    "user",
-    "name email"
-  );
+  const members =
+    await TeamMember.find({
+      team: teamId,
+    }).populate(
+      "user",
+      "name email"
+    );
 
   return {
     ...team.toObject(),

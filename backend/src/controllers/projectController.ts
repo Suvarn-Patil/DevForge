@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 
 import {
   createProject as createProjectService,
@@ -8,20 +8,30 @@ import {
   deleteProject as deleteProjectService,
 } from "../services/projectService";
 
+import { AuthRequest } from "../middleware/authMiddleware";
+
+/* ================================
+   CREATE PROJECT
+================================ */
+
 export const createProject = async (
-  req: Request,
+  req: AuthRequest & { params: { id: string } },
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { name, description } = req.body;
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
 
-    const owner = (req as any).userId;
+    const { name, description } = req.body;
 
     const project = await createProjectService(
       name,
       description,
-      owner
+      req.userId
     );
 
     res.status(201).json(project);
@@ -30,15 +40,24 @@ export const createProject = async (
   }
 };
 
+/* ================================
+   GET PROJECTS
+================================ */
+
 export const getProjects = async (
-  req: Request,
+  req: AuthRequest & { params: { id: string } },
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const owner = (req as any).userId;
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
 
-    const projects = await getProjectsByOwner(owner);
+    const projects =
+      await getProjectsByOwner(req.userId);
 
     res.status(200).json(projects);
   } catch (error) {
@@ -46,17 +65,25 @@ export const getProjects = async (
   }
 };
 
+/* ================================
+   GET PROJECT
+================================ */
+
 export const getProject = async (
-  req: Request<{ id: string }>,
+  req: AuthRequest & { params: { id: string } },
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const owner = (req as any).userId;
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
 
     const project = await getProjectById(
       req.params.id,
-      owner
+      req.userId
     );
 
     if (!project) {
@@ -70,20 +97,29 @@ export const getProject = async (
     next(error);
   }
 };
+
+/* ================================
+   UPDATE PROJECT
+================================ */
 
 export const updateProject = async (
-  req: Request<{ id: string }>,
+  req: AuthRequest & { params: { id: string } },
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const owner = (req as any).userId;
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
 
-    const project = await updateProjectService(
-      req.params.id,
-      owner,
-      req.body
-    );
+    const project =
+      await updateProjectService(
+        req.params.id,
+        req.userId,
+        req.body
+      );
 
     if (!project) {
       return res.status(404).json({
@@ -97,18 +133,27 @@ export const updateProject = async (
   }
 };
 
+/* ================================
+   DELETE PROJECT
+================================ */
+
 export const deleteProject = async (
-  req: Request<{ id: string }>,
+  req: AuthRequest & { params: { id: string } },
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const owner = (req as any).userId;
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
 
-    const project = await deleteProjectService(
-      req.params.id,
-      owner
-    );
+    const project =
+      await deleteProjectService(
+        req.params.id,
+        req.userId
+      );
 
     if (!project) {
       return res.status(404).json({
