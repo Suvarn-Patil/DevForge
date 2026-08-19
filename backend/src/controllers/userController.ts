@@ -1,35 +1,150 @@
-import { Response, NextFunction } from "express";
+import {
+  Response,
+  NextFunction,
+} from "express";
 
-import { AuthRequest } from "../middleware/authMiddleware";
+import {
+  AuthRequest,
+} from "../middleware/authMiddleware";
 
-import { searchUsers as searchUsersService } from "../services/userService";
+import User from "../models/User";
 
-export const searchUsers = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    if (!req.userId) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
+import {
+  searchUsers as searchUsersService,
+} from "../services/userService";
+
+/* ================================
+   GET CURRENT USER
+================================ */
+
+export const getCurrentUser =
+  async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const user =
+        await User.findById(
+          req.userId
+        ).select(
+          "-password"
+        );
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      res.status(200).json(
+        user
+      );
+    } catch (error) {
+      next(error);
     }
+  };
 
-    const search =
-      typeof req.query.search === "string"
-        ? req.query.search.trim()
-        : "";
+/* ================================
+   UPDATE CURRENT USER
+================================ */
 
-    if (!search) {
-      return res.json([]);
+export const updateCurrentUser =
+  async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const name =
+        typeof req.body.name ===
+        "string"
+          ? req.body.name.trim()
+          : "";
+
+      if (!name) {
+        return res.status(400).json({
+          message:
+            "Name is required",
+        });
+      }
+
+      const user =
+        await User.findByIdAndUpdate(
+          req.userId,
+          {
+            name,
+          },
+          {
+            new: true,
+            runValidators: true,
+          }
+        ).select(
+          "-password"
+        );
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      res.status(200).json(
+        user
+      );
+    } catch (error) {
+      next(error);
     }
+  };
 
-    const users =
-      await searchUsersService(search);
+/* ================================
+   SEARCH USERS
+================================ */
 
-    res.status(200).json(users);
-  } catch (error) {
-    next(error);
-  }
-};
+export const searchUsers =
+  async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const search =
+        typeof req.query.search ===
+        "string"
+          ? req.query.search.trim()
+          : "";
+
+      if (!search) {
+        return res.json([]);
+      }
+
+      const users =
+        await searchUsersService(
+          search
+        );
+
+      res.status(200).json(
+        users
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
