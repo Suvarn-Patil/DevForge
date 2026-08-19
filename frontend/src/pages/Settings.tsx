@@ -1,21 +1,22 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
-import api from "../api/axios";
-
-type User = {
-  _id: string;
-  name: string;
-  email: string;
-};
+import {
+  changePassword,
+  getCurrentUser,
+  updateCurrentUser,
+} from "../services/userService";
 
 export default function Settings() {
-  const [user, setUser] =
-    useState<User | null>(null);
-
   const [name, setName] =
+    useState("");
+
+  const [email, setEmail] =
     useState("");
 
   const [currentPassword, setCurrentPassword] =
@@ -47,21 +48,19 @@ export default function Settings() {
   ================================= */
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const loadUser = async () => {
       try {
         setLoading(true);
+        setError("");
 
-        const response =
-          await api.get("/users/me");
+        const data =
+          await getCurrentUser();
 
-        setUser(response.data);
-
-        setName(
-          response.data.name || ""
-        );
+        setName(data.name || "");
+        setEmail(data.email || "");
       } catch (error) {
         console.error(
-          "Failed to load settings:",
+          "Failed to load account:",
           error
         );
 
@@ -73,7 +72,7 @@ export default function Settings() {
       }
     };
 
-    fetchUser();
+    loadUser();
   }, []);
 
   /* ================================
@@ -86,9 +85,15 @@ export default function Settings() {
         setError(
           "Name cannot be empty."
         );
-
         setMessage("");
+        return;
+      }
 
+      if (!email.trim()) {
+        setError(
+          "Email cannot be empty."
+        );
+        setMessage("");
         return;
       }
 
@@ -97,33 +102,27 @@ export default function Settings() {
         setError("");
         setMessage("");
 
-        const response =
-          await api.patch(
-            "/users/me",
-            {
-              name: name.trim(),
-            }
+        const updated =
+          await updateCurrentUser(
+            name.trim(),
+            email.trim()
           );
 
-        setUser(
-          response.data
-        );
-
-        setName(
-          response.data.name
-        );
+        setName(updated.name);
+        setEmail(updated.email);
 
         setMessage(
           "Profile updated successfully."
         );
-      } catch (error) {
+      } catch (error: any) {
         console.error(
           "Failed to update profile:",
           error
         );
 
         setError(
-          "Failed to update profile."
+          error?.response?.data?.message ||
+            "Failed to update profile."
         );
       } finally {
         setSavingProfile(false);
@@ -144,9 +143,7 @@ export default function Settings() {
         setError(
           "Please fill in all password fields."
         );
-
         setMessage("");
-
         return;
       }
 
@@ -156,9 +153,7 @@ export default function Settings() {
         setError(
           "New password must be at least 6 characters."
         );
-
         setMessage("");
-
         return;
       }
 
@@ -169,27 +164,19 @@ export default function Settings() {
         setError(
           "New passwords do not match."
         );
-
         setMessage("");
-
         return;
       }
 
       try {
-        setChangingPassword(
-          true
-        );
-
+        setChangingPassword(true);
         setError("");
         setMessage("");
 
         const response =
-          await api.patch(
-            "/users/me/password",
-            {
-              currentPassword,
-              newPassword,
-            }
+          await changePassword(
+            currentPassword,
+            newPassword
           );
 
         setCurrentPassword("");
@@ -197,7 +184,7 @@ export default function Settings() {
         setConfirmPassword("");
 
         setMessage(
-          response.data?.message ||
+          response?.message ||
             "Password changed successfully."
         );
       } catch (error: any) {
@@ -207,14 +194,11 @@ export default function Settings() {
         );
 
         setError(
-          error?.response?.data
-            ?.message ||
+          error?.response?.data?.message ||
             "Failed to change password."
         );
       } finally {
-        setChangingPassword(
-          false
-        );
+        setChangingPassword(false);
       }
     };
 
@@ -238,42 +222,32 @@ export default function Settings() {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-zinc-950">
-
         <Sidebar />
 
         <div className="flex flex-1 flex-col">
-
           <Topbar />
 
           <main className="p-8">
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-10 text-center text-zinc-400">
               Loading settings...
             </div>
-
           </main>
-
         </div>
-
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen bg-zinc-950">
-
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-
         <Topbar />
 
         <main className="p-8">
-
           {/* HEADER */}
 
           <div>
-
             <h1 className="text-4xl font-bold text-white">
               Settings
             </h1>
@@ -281,13 +255,12 @@ export default function Settings() {
             <p className="mt-2 text-zinc-400">
               Manage your account and security settings.
             </p>
-
           </div>
 
           {/* SUCCESS */}
 
           {message && (
-            <div className="mt-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-400">
+            <div className="mt-6 max-w-3xl rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-400">
               {message}
             </div>
           )}
@@ -295,17 +268,14 @@ export default function Settings() {
           {/* ERROR */}
 
           {error && (
-            <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+            <div className="mt-6 max-w-3xl rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
               {error}
             </div>
           )}
 
-          {/* ================================
-              PROFILE SETTINGS
-          ================================= */}
+          {/* PROFILE */}
 
           <section className="mt-8 max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
-
             <h2 className="text-xl font-semibold text-white">
               Profile
             </h2>
@@ -315,11 +285,9 @@ export default function Settings() {
             </p>
 
             <div className="mt-6 space-y-5">
-
               {/* NAME */}
 
               <div>
-
                 <label className="block text-sm font-medium text-zinc-300">
                   Full Name
                 </label>
@@ -331,65 +299,60 @@ export default function Settings() {
                       e.target.value
                     )
                   }
+                  placeholder="Your full name"
                   className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-white outline-none focus:border-blue-500"
                 />
-
               </div>
 
               {/* EMAIL */}
 
               <div>
-
                 <label className="block text-sm font-medium text-zinc-300">
                   Email
                 </label>
 
                 <input
-                  value={
-                    user?.email ||
-                    ""
+                  type="email"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(
+                      e.target.value
+                    )
                   }
-                  disabled
-                  className="mt-2 w-full cursor-not-allowed rounded-xl border border-zinc-800 bg-zinc-950 p-3.5 text-zinc-500"
+                  placeholder="you@example.com"
+                  className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-white outline-none focus:border-blue-500"
                 />
 
                 <p className="mt-2 text-xs text-zinc-600">
-                  Email changes are not available yet.
+                  This email is used to log in to DevForge.
                 </p>
-
               </div>
 
               {/* SAVE */}
 
               <div className="flex justify-end">
-
                 <button
                   onClick={
                     handleSaveProfile
                   }
                   disabled={
                     savingProfile ||
-                    !name.trim()
+                    !name.trim() ||
+                    !email.trim()
                   }
-                  className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {savingProfile
                     ? "Saving..."
                     : "Save Changes"}
                 </button>
-
               </div>
-
             </div>
-
           </section>
 
-          {/* ================================
-              PASSWORD
-          ================================= */}
+          {/* PASSWORD */}
 
           <section className="mt-6 max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
-
             <h2 className="text-xl font-semibold text-white">
               Change Password
             </h2>
@@ -399,11 +362,9 @@ export default function Settings() {
             </p>
 
             <div className="mt-6 space-y-5">
-
-              {/* CURRENT PASSWORD */}
+              {/* CURRENT */}
 
               <div>
-
                 <label className="block text-sm font-medium text-zinc-300">
                   Current Password
                 </label>
@@ -421,22 +382,18 @@ export default function Settings() {
                   placeholder="Enter current password"
                   className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-white outline-none focus:border-blue-500"
                 />
-
               </div>
 
-              {/* NEW PASSWORD */}
+              {/* NEW */}
 
               <div>
-
                 <label className="block text-sm font-medium text-zinc-300">
                   New Password
                 </label>
 
                 <input
                   type="password"
-                  value={
-                    newPassword
-                  }
+                  value={newPassword}
                   onChange={(e) =>
                     setNewPassword(
                       e.target.value
@@ -445,13 +402,11 @@ export default function Settings() {
                   placeholder="Minimum 6 characters"
                   className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-white outline-none focus:border-blue-500"
                 />
-
               </div>
 
               {/* CONFIRM */}
 
               <div>
-
                 <label className="block text-sm font-medium text-zinc-300">
                   Confirm New Password
                 </label>
@@ -469,13 +424,11 @@ export default function Settings() {
                   placeholder="Repeat new password"
                   className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-white outline-none focus:border-blue-500"
                 />
-
               </div>
 
               {/* CHANGE */}
 
               <div className="flex justify-end">
-
                 <button
                   onClick={
                     handleChangePassword
@@ -483,25 +436,19 @@ export default function Settings() {
                   disabled={
                     changingPassword
                   }
-                  className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {changingPassword
                     ? "Changing..."
                     : "Change Password"}
                 </button>
-
               </div>
-
             </div>
-
           </section>
 
-          {/* ================================
-              ACCOUNT
-          ================================= */}
+          {/* ACCOUNT */}
 
           <section className="mt-6 max-w-3xl rounded-2xl border border-red-500/20 bg-zinc-900 p-8">
-
             <h2 className="text-xl font-semibold text-white">
               Account
             </h2>
@@ -514,17 +461,13 @@ export default function Settings() {
               onClick={
                 handleLogout
               }
-              className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 font-semibold text-red-400 hover:bg-red-500/20"
+              className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 font-semibold text-red-400 transition hover:bg-red-500/20"
             >
               Logout
             </button>
-
           </section>
-
         </main>
-
       </div>
-
     </div>
   );
 }

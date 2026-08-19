@@ -1,53 +1,82 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  Mail,
+  Calendar,
+  Settings as SettingsIcon,
+} from "lucide-react";
+
+import {
+  useNavigate,
+} from "react-router-dom";
 
 import Sidebar from "../components/dashboard/Sidebar";
 import Topbar from "../components/dashboard/Topbar";
 
-import api from "../api/axios";
+import {
+  getCurrentUser,
+  type User,
+} from "../services/userService";
 
-type User = {
-  _id: string;
-  name: string;
-  email: string;
-};
+function getInitials(
+  name: string
+) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map(
+      (part) =>
+        part.charAt(0).toUpperCase()
+    )
+    .slice(0, 2)
+    .join("");
+}
+
+function formatDate(
+  date?: string
+) {
+  if (!date) {
+    return "Unknown";
+  }
+
+  return new Date(
+    date
+  ).toLocaleDateString(
+    "en-IN",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  );
+}
 
 export default function Profile() {
+  const navigate =
+    useNavigate();
+
   const [user, setUser] =
     useState<User | null>(null);
-
-  const [name, setName] =
-    useState("");
 
   const [loading, setLoading] =
     useState(true);
 
-  const [saving, setSaving] =
-    useState(false);
-
-  const [message, setMessage] =
-    useState("");
-
   const [error, setError] =
     useState("");
 
-  /* ================================
-     LOAD PROFILE
-  ================================= */
-
   useEffect(() => {
-    const fetchProfile = async () => {
+    const loadUser = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response =
-          await api.get("/users/me");
-
         const data =
-          response.data;
+          await getCurrentUser();
 
         setUser(data);
-        setName(data.name || "");
       } catch (error) {
         console.error(
           "Failed to load profile:",
@@ -62,275 +91,171 @@ export default function Profile() {
       }
     };
 
-    fetchProfile();
+    loadUser();
   }, []);
-
-  /* ================================
-     SAVE PROFILE
-  ================================= */
-
-  const handleSave = async () => {
-    if (!name.trim()) {
-      setError(
-        "Name cannot be empty."
-      );
-
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError("");
-      setMessage("");
-
-      const response =
-        await api.patch(
-          "/users/me",
-          {
-            name: name.trim(),
-          }
-        );
-
-      const updatedUser =
-        response.data;
-
-      setUser(updatedUser);
-      setName(
-        updatedUser.name || ""
-      );
-
-      setMessage(
-        "Profile updated successfully."
-      );
-    } catch (error) {
-      console.error(
-        "Failed to update profile:",
-        error
-      );
-
-      setError(
-        "Failed to update profile."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /* ================================
-     LOGOUT
-  ================================= */
-
-  const handleLogout = () => {
-    localStorage.removeItem(
-      "token"
-    );
-
-    window.location.href =
-      "/login";
-  };
-
-  /* ================================
-     INITIAL LOADING
-  ================================= */
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen bg-zinc-950">
-
-        <Sidebar />
-
-        <div className="flex flex-1 flex-col">
-
-          <Topbar />
-
-          <main className="p-8">
-
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
-              Loading profile...
-            </div>
-
-          </main>
-
-        </div>
-
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen bg-zinc-950">
-
       <Sidebar />
 
       <div className="flex flex-1 flex-col">
-
         <Topbar />
 
         <main className="p-8">
-
           {/* HEADER */}
 
-          <div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-white">
+                Profile
+              </h1>
 
-            <h1 className="text-4xl font-bold text-white">
-              Profile
-            </h1>
+              <p className="mt-2 text-zinc-400">
+                View your DevForge account information.
+              </p>
+            </div>
 
-            <p className="mt-2 text-zinc-400">
-              Manage your DevForge profile.
-            </p>
-
+            <button
+              onClick={() =>
+                navigate(
+                  "/settings"
+                )
+              }
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-500"
+            >
+              <SettingsIcon
+                size={18}
+              />
+              Edit Profile
+            </button>
           </div>
+
+          {/* LOADING */}
+
+          {loading && (
+            <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-10 text-center text-zinc-400">
+              Loading profile...
+            </div>
+          )}
 
           {/* ERROR */}
 
-          {error && (
-            <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
+          {!loading && error && (
+            <div className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-red-400">
               {error}
             </div>
           )}
 
-          {/* SUCCESS */}
+          {/* PROFILE */}
 
-          {message && (
-            <div className="mt-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-sm text-green-400">
-              {message}
-            </div>
-          )}
+          {!loading &&
+            !error &&
+            user && (
+              <div className="mt-8 max-w-4xl">
+                {/* PROFILE CARD */}
 
-          {/* PROFILE CARD */}
+                <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+                  <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
+                    {/* AVATAR */}
 
-          <div className="mt-8 max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+                    <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-blue-600 text-3xl font-bold text-white ring-4 ring-blue-500/10">
+                      {getInitials(
+                        user.name
+                      )}
+                    </div>
 
-            {/* PROFILE HEADER */}
+                    {/* USER */}
 
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+                    <div>
+                      <h2 className="text-3xl font-bold text-white">
+                        {user.name}
+                      </h2>
 
-              <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-blue-600 text-4xl font-bold text-white">
+                      <p className="mt-2 text-zinc-400">
+                        DevForge Developer
+                      </p>
 
-                {user?.name
-                  ?.charAt(0)
-                  .toUpperCase() ||
-                  "U"}
+                      <div className="mt-4 flex flex-wrap gap-4">
+                        <div className="flex items-center gap-2 text-sm text-zinc-400">
+                          <Mail
+                            size={16}
+                            className="text-blue-400"
+                          />
 
+                          {user.email}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-zinc-400">
+                          <Calendar
+                            size={16}
+                            className="text-blue-400"
+                          />
+
+                          Joined{" "}
+                          {formatDate(
+                            user.createdAt
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* ACCOUNT INFORMATION */}
+
+                <section className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-8">
+                  <h2 className="text-xl font-semibold text-white">
+                    Account Information
+                  </h2>
+
+                  <div className="mt-6 grid gap-5 md:grid-cols-2">
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                      <p className="text-sm text-zinc-500">
+                        Full Name
+                      </p>
+
+                      <p className="mt-2 font-medium text-white">
+                        {user.name}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                      <p className="text-sm text-zinc-500">
+                        Email
+                      </p>
+
+                      <p className="mt-2 break-all font-medium text-white">
+                        {user.email}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                      <p className="text-sm text-zinc-500">
+                        Account ID
+                      </p>
+
+                      <p className="mt-2 break-all font-mono text-xs text-zinc-400">
+                        {user._id}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+                      <p className="text-sm text-zinc-500">
+                        Member Since
+                      </p>
+
+                      <p className="mt-2 font-medium text-white">
+                        {formatDate(
+                          user.createdAt
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </section>
               </div>
-
-              <div>
-
-                <h2 className="text-3xl font-bold text-white">
-                  {user?.name ||
-                    "User"}
-                </h2>
-
-                <p className="mt-1 text-zinc-400">
-                  {user?.email ||
-                    ""}
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* FORM */}
-
-            <div className="mt-10 space-y-6">
-
-              {/* NAME */}
-
-              <div>
-
-                <label className="block text-sm font-medium text-zinc-300">
-                  Full Name
-                </label>
-
-                <input
-                  value={name}
-                  onChange={(e) =>
-                    setName(
-                      e.target.value
-                    )
-                  }
-                  placeholder="Enter your name"
-                  className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 p-3.5 text-white outline-none focus:border-blue-500"
-                />
-
-              </div>
-
-              {/* EMAIL */}
-
-              <div>
-
-                <label className="block text-sm font-medium text-zinc-300">
-                  Email
-                </label>
-
-                <input
-                  value={
-                    user?.email ||
-                    ""
-                  }
-                  disabled
-                  className="mt-2 w-full cursor-not-allowed rounded-xl border border-zinc-800 bg-zinc-950 p-3.5 text-zinc-500 outline-none"
-                />
-
-                <p className="mt-2 text-xs text-zinc-600">
-                  Email cannot be changed here.
-                </p>
-
-              </div>
-
-              {/* SAVE */}
-
-              <div className="flex justify-end">
-
-                <button
-                  onClick={
-                    handleSave
-                  }
-                  disabled={
-                    saving ||
-                    !name.trim()
-                  }
-                  className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {saving
-                    ? "Saving..."
-                    : "Save Changes"}
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* ACCOUNT */}
-
-          <div className="mt-6 max-w-3xl rounded-2xl border border-red-500/20 bg-zinc-900 p-8">
-
-            <h2 className="text-lg font-semibold text-white">
-              Account
-            </h2>
-
-            <p className="mt-1 text-sm text-zinc-500">
-              Sign out of your DevForge account.
-            </p>
-
-            <button
-              onClick={
-                handleLogout
-              }
-              className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-400 hover:bg-red-500/20"
-            >
-              Logout
-            </button>
-
-          </div>
-
+            )}
         </main>
-
       </div>
-
     </div>
   );
 }

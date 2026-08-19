@@ -67,9 +67,13 @@ export const updateCurrentUser =
       }
 
       const name =
-        typeof req.body.name ===
-        "string"
+        typeof req.body.name === "string"
           ? req.body.name.trim()
+          : "";
+
+      const email =
+        typeof req.body.email === "string"
+          ? req.body.email.trim().toLowerCase()
           : "";
 
       if (!name) {
@@ -78,11 +82,42 @@ export const updateCurrentUser =
         });
       }
 
+      if (!email) {
+        return res.status(400).json({
+          message: "Email is required",
+        });
+      }
+
+      const emailRegex =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          message: "Please enter a valid email address",
+        });
+      }
+
+      const existingUser =
+        await User.findOne({
+          email,
+          _id: {
+            $ne: req.userId,
+          },
+        });
+
+      if (existingUser) {
+        return res.status(400).json({
+          message:
+            "An account with this email already exists",
+        });
+      }
+
       const user =
         await User.findByIdAndUpdate(
           req.userId,
           {
             name,
+            email,
           },
           {
             new: true,
@@ -142,6 +177,16 @@ export const changePassword =
         return res.status(400).json({
           message:
             "New password must be at least 6 characters",
+        });
+      }
+
+      if (
+        currentPassword ===
+        newPassword
+      ) {
+        return res.status(400).json({
+          message:
+            "New password must be different from current password",
         });
       }
 
