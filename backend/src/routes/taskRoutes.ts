@@ -4,6 +4,7 @@ import {
   createTask,
   getTasks,
   getTaskById,
+  updateTask,
   updateTaskStatus,
   deleteTask,
 } from "../controllers/taskController";
@@ -15,7 +16,7 @@ import {
 const router =
   express.Router();
 
-// CREATE TASK
+/* CREATE TASK */
 
 router.post(
   "/",
@@ -23,7 +24,7 @@ router.post(
   createTask
 );
 
-// GET ALL TASKS
+/* GET ALL TASKS */
 
 router.get(
   "/",
@@ -31,7 +32,7 @@ router.get(
   getTasks
 );
 
-// GET SINGLE TASK
+/* GET SINGLE TASK */
 
 router.get(
   "/:id",
@@ -39,7 +40,15 @@ router.get(
   getTaskById
 );
 
-// UPDATE STATUS
+/* EDIT TASK */
+
+router.patch(
+  "/:id",
+  protect,
+  updateTask
+);
+
+/* UPDATE STATUS */
 
 router.patch(
   "/:id/status",
@@ -47,7 +56,7 @@ router.patch(
   updateTaskStatus
 );
 
-// DELETE TASK
+/* DELETE TASK */
 
 router.delete(
   "/:id",
