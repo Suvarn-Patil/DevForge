@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import {
   useNavigate,
   useParams,
@@ -20,6 +21,11 @@ import {
   deleteComment,
   type Comment,
 } from "../services/commentService";
+
+import {
+  getProjectActivities,
+  type Activity,
+} from "../services/activityService";
 
 import api from "../api/axios";
 
@@ -98,33 +104,14 @@ export default function TaskDetails() {
     useState<string | null>(null);
 
   /* ================================
-     FETCH TASK
+     ACTIVITY
   ================================= */
 
-  const fetchTask = async () => {
-    if (!id) return;
+  const [activities, setActivities] =
+    useState<Activity[]>([]);
 
-    try {
-      setLoading(true);
-      setError("");
-
-      const data =
-        await getTaskById(id);
-
-      setTask(data);
-    } catch (error) {
-      console.error(
-        "Failed to fetch task:",
-        error
-      );
-
-      setError(
-        "Failed to load task."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [activitiesLoading, setActivitiesLoading] =
+    useState(true);
 
   /* ================================
      FETCH COMMENTS
@@ -150,9 +137,81 @@ export default function TaskDetails() {
     }
   };
 
+  /* ================================
+     FETCH ACTIVITY
+  ================================= */
+
+  const fetchActivities = async (
+    projectId: string
+  ) => {
+    try {
+      setActivitiesLoading(true);
+
+      const data =
+        await getProjectActivities(
+          projectId
+        );
+
+      setActivities(data);
+    } catch (error) {
+      console.error(
+        "Failed to fetch activities:",
+        error
+      );
+
+      setActivities([]);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
+  /* ================================
+     INITIAL LOAD
+  ================================= */
+
   useEffect(() => {
-    fetchTask();
-    fetchComments();
+    const loadData = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+
+        const taskData =
+          await getTaskById(id);
+
+        setTask(taskData);
+
+        await fetchComments();
+
+        if (
+          typeof taskData.project ===
+          "string"
+        ) {
+          await fetchActivities(
+            taskData.project
+          );
+        } else if (
+          taskData.project?._id
+        ) {
+          await fetchActivities(
+            taskData.project._id
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load task:",
+          error
+        );
+
+        setError(
+          "Failed to load task."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [id]);
 
   /* ================================
@@ -308,6 +367,21 @@ export default function TaskDetails() {
 
       setAssigneeSearch("");
       setUsers([]);
+
+      /*
+       * Refresh activity after edit.
+       */
+      const projectId =
+        typeof updated.project ===
+        "string"
+          ? updated.project
+          : updated.project?._id;
+
+      if (projectId) {
+        await fetchActivities(
+          projectId
+        );
+      }
     } catch (error) {
       console.error(
         "Failed to update task:",
@@ -346,6 +420,18 @@ export default function TaskDetails() {
           );
 
         setTask(updated);
+
+        const projectId =
+          typeof updated.project ===
+          "string"
+            ? updated.project
+            : updated.project?._id;
+
+        if (projectId) {
+          await fetchActivities(
+            projectId
+          );
+        }
       } catch (error) {
         console.error(
           "Failed to update status:",
@@ -426,6 +512,24 @@ export default function TaskDetails() {
         );
 
         setCommentText("");
+
+        /*
+         * Refresh activity after
+         * creating a comment.
+         */
+        if (task) {
+          const projectId =
+            typeof task.project ===
+            "string"
+              ? task.project
+              : task.project?._id;
+
+          if (projectId) {
+            await fetchActivities(
+              projectId
+            );
+          }
+        }
       } catch (error) {
         console.error(
           "Failed to create comment:",
@@ -472,6 +576,23 @@ export default function TaskDetails() {
                 commentId
             )
         );
+
+        /*
+         * Refresh activity.
+         */
+        if (task) {
+          const projectId =
+            typeof task.project ===
+            "string"
+              ? task.project
+              : task.project?._id;
+
+          if (projectId) {
+            await fetchActivities(
+              projectId
+            );
+          }
+        }
       } catch (error) {
         console.error(
           "Failed to delete comment:",
@@ -487,6 +608,30 @@ export default function TaskDetails() {
         );
       }
     };
+
+  /* ================================
+     FILTER TASK ACTIVITY
+  ================================= */
+
+  const taskActivities =
+    activities.filter(
+      (activity) => {
+        if (!activity.task) {
+          return false;
+        }
+
+        const activityTaskId =
+          typeof activity.task ===
+          "string"
+            ? activity.task
+            : activity.task._id;
+
+        return (
+          activityTaskId ===
+          task?._id
+        );
+      }
+    );
 
   /* ================================
      LOADING
@@ -913,6 +1058,98 @@ export default function TaskDetails() {
                         <p className="mt-4 whitespace-pre-wrap pl-12 text-sm leading-6 text-zinc-300">
                           {comment.text}
                         </p>
+
+                      </div>
+
+                    )
+                  )
+
+                )}
+
+              </div>
+
+            </section>
+
+            {/* ================================
+                ACTIVITY
+            ================================= */}
+
+            <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+
+              <div className="flex items-center justify-between">
+
+                <h2 className="text-lg font-semibold">
+                  Activity
+                </h2>
+
+                <span className="text-sm text-zinc-500">
+                  {taskActivities.length}
+                </span>
+
+              </div>
+
+              <div className="mt-6 space-y-5">
+
+                {activitiesLoading ? (
+
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 text-center text-sm text-zinc-500">
+                    Loading activity...
+                  </div>
+
+                ) : taskActivities.length ===
+                  0 ? (
+
+                  <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 p-6 text-center text-sm text-zinc-500">
+                    No activity yet.
+                  </div>
+
+                ) : (
+
+                  taskActivities.map(
+                    (activity) => (
+
+                      <div
+                        key={
+                          activity._id
+                        }
+                        className="flex gap-3"
+                      >
+
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-sm font-semibold text-blue-400">
+                          {activity.user?.name
+                            ?.charAt(
+                              0
+                            )
+                            .toUpperCase() ||
+                            "U"}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+
+                          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+
+                            <p className="text-sm leading-6 text-zinc-300">
+
+                              <span className="font-semibold text-white">
+                                {activity.user?.name ||
+                                  "Unknown User"}
+                              </span>{" "}
+
+                              {activity.description}
+
+                            </p>
+
+                            <p className="mt-2 text-xs text-zinc-500">
+                              {activity.createdAt
+                                ? new Date(
+                                    activity.createdAt
+                                  ).toLocaleString()
+                                : ""}
+                            </p>
+
+                          </div>
+
+                        </div>
 
                       </div>
 
