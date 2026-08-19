@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import activityRoutes from "./routes/activityRoutes";
+import aiRoutes from "./routes/aiRoutes";
 
 import { errorMiddleware } from "./middleware/errorMiddleware";
 
@@ -22,20 +23,38 @@ app.use(express.json());
 // ===============================
 
 app.use("/api/auth", authRoutes);
+
 app.use("/api/projects", projectRoutes);
+
 app.use("/api/tasks", taskRoutes);
+
 app.use("/api/teams", teamRoutes);
+
 app.use("/api/users", userRoutes);
+
 app.use("/api", commentRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api", activityRoutes);
+
+app.use(
+  "/api/notifications",
+  notificationRoutes
+);
+
+app.use(
+  "/api",
+  activityRoutes
+);
+
+app.use(
+  "/api/ai",
+  aiRoutes
+);
 
 // ===============================
 // HEALTH CHECK
 // ===============================
 
 app.get("/", (_req, res) => {
-  res.json({
+  res.status(200).json({
     message: "DevForge API Running",
   });
 });
