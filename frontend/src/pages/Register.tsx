@@ -9,12 +9,29 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleRegister = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
 
+    setError("");
+
+    if (!name || !email || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
     try {
+      setLoading(true);
+
       await registerUser(
         name,
         email,
@@ -24,15 +41,21 @@ export default function Register() {
       alert("Account Created Successfully");
 
       navigate("/login");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
 
-      alert("Registration Failed");
+      const message =
+        error?.response?.data?.message ||
+        "Registration failed. Please try again.";
+
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-6">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-6">
 
       <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-10">
 
@@ -43,6 +66,12 @@ export default function Register() {
         <p className="mt-2 text-zinc-400">
           Start building with DevForge.
         </p>
+
+        {error && (
+          <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-4 text-sm text-red-400">
+            {error}
+          </div>
+        )}
 
         <form
           onSubmit={handleRegister}
@@ -81,9 +110,12 @@ export default function Register() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-500"
+            disabled={loading}
+            className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Create Account
+            {loading
+              ? "Creating Account..."
+              : "Create Account"}
           </button>
 
         </form>

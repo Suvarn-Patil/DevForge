@@ -3,18 +3,25 @@ import express from "express";
 import {
   createProject,
   getProjects,
-  getProjectTasks,
+  getProject,
+  updateProject,
+  deleteProject,
 } from "../controllers/projectController";
 
+import { protect } from "../middleware/authMiddleware";
+import { validate } from "../middleware/validate";
+
 import {
-  protect,
-} from "../middleware/authMiddleware";
+  createProjectSchema,
+  updateProjectSchema,
+} from "../validators/projectValidator";
 
 const router = express.Router();
 
 router.post(
   "/",
   protect,
+  validate(createProjectSchema),
   createProject
 );
 
@@ -25,9 +32,22 @@ router.get(
 );
 
 router.get(
-  "/:id/tasks",
+  "/:id",
   protect,
-  getProjectTasks
+  getProject
+);
+
+router.put(
+  "/:id",
+  protect,
+  validate(updateProjectSchema),
+  updateProject
+);
+
+router.delete(
+  "/:id",
+  protect,
+  deleteProject
 );
 
 export default router;

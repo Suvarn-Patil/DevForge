@@ -3,6 +3,7 @@ import express from "express";
 import {
   createTask,
   getTasks,
+  getTaskById,
   updateTaskStatus,
   deleteTask,
 } from "../controllers/taskController";
@@ -11,7 +12,10 @@ import {
   protect,
 } from "../middleware/authMiddleware";
 
-const router = express.Router();
+const router =
+  express.Router();
+
+// CREATE TASK
 
 router.post(
   "/",
@@ -19,17 +23,31 @@ router.post(
   createTask
 );
 
+// GET ALL TASKS
+
 router.get(
   "/",
   protect,
   getTasks
 );
 
-router.patch(
+// GET SINGLE TASK
+
+router.get(
   "/:id",
+  protect,
+  getTaskById
+);
+
+// UPDATE STATUS
+
+router.patch(
+  "/:id/status",
   protect,
   updateTaskStatus
 );
+
+// DELETE TASK
 
 router.delete(
   "/:id",

@@ -1,67 +1,108 @@
-import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
   FolderKanban,
-  KanbanSquare,
+  Columns3,
+  Users,
   Bot,
   User,
   Settings,
 } from "lucide-react";
 
-const menu = [
+import { Link, useLocation } from "react-router-dom";
+
+const navItems = [
   {
-    icon: LayoutDashboard,
     name: "Dashboard",
     path: "/dashboard",
+    icon: LayoutDashboard,
   },
   {
-    icon: FolderKanban,
     name: "Projects",
     path: "/projects",
+    icon: FolderKanban,
   },
   {
-    icon: KanbanSquare,
+    name: "Teams",
+    path: "/teams",
+    icon: Users,
+  },
+  {
     name: "Kanban",
     path: "/kanban",
+    icon: Columns3,
   },
   {
-    icon: Bot,
     name: "AI Assistant",
     path: "/ai",
+    icon: Bot,
   },
   {
-    icon: User,
     name: "Profile",
     path: "/profile",
+    icon: User,
   },
   {
-    icon: Settings,
     name: "Settings",
     path: "/settings",
+    icon: Settings,
   },
 ];
 
 export default function Sidebar() {
+  const location = useLocation();
+
   return (
-    <aside className="flex h-screen w-72 flex-col border-r border-zinc-800 bg-zinc-950">
-      <div className="border-b border-zinc-800 p-6">
-        <h1 className="text-3xl font-bold text-blue-500">
+    <aside className="w-64 shrink-0 border-r border-zinc-800 bg-zinc-950">
+
+      {/* Logo */}
+
+      <div className="flex h-20 items-center border-b border-zinc-800 px-6">
+        <Link
+          to="/dashboard"
+          className="text-3xl font-bold text-blue-500"
+        >
           DevForge
-        </h1>
+        </Link>
       </div>
 
-      <div className="mt-8 flex flex-col gap-2 px-4">
-        {menu.map((item) => (
-          <Link
-            key={item.name}
-            to={item.path}
-            className="flex items-center gap-4 rounded-xl px-4 py-3 text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
-          >
-            <item.icon size={22} />
-            {item.name}
-          </Link>
-        ))}
-      </div>
+      {/* Navigation */}
+
+      <nav className="p-5">
+
+        <div className="space-y-2">
+
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            const isActive =
+              location.pathname === item.path ||
+              location.pathname.startsWith(
+                `${item.path}/`
+              );
+
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-4 rounded-xl px-4 py-3 transition ${
+                  isActive
+                    ? "bg-blue-500/10 text-blue-500"
+                    : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                }`}
+              >
+                <Icon size={22} />
+
+                <span className="font-medium">
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+
+        </div>
+
+      </nav>
+
     </aside>
   );
 }

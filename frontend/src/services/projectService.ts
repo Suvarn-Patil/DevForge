@@ -1,16 +1,16 @@
-import axios from "axios";
+import api from "../api/axios";
 
-const API_URL =
-  "https://devforge-api-i5j5.onrender.com/api/projects";
+export interface Project {
+  _id: string;
+  name: string;
+  description?: string;
+  owner?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-export const getProjects = async () => {
-  const token = localStorage.getItem("token");
-
-  const response = await axios.get(API_URL, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export const getProjects = async (): Promise<Project[]> => {
+  const response = await api.get("/projects");
 
   return response.data;
 };
@@ -19,19 +19,44 @@ export const createProject = async (
   name: string,
   description: string
 ) => {
-  const token = localStorage.getItem("token");
+  const response = await api.post("/projects", {
+    name,
+    description,
+  });
 
-  const response = await axios.post(
-    API_URL,
-    {
-      name,
-      description,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+  return response.data;
+};
+
+export const getProject = async (
+  projectId: string
+): Promise<Project> => {
+  const response = await api.get(
+    `/projects/${projectId}`
+  );
+
+  return response.data;
+};
+
+export const updateProject = async (
+  projectId: string,
+  data: {
+    name: string;
+    description: string;
+  }
+) => {
+  const response = await api.put(
+    `/projects/${projectId}`,
+    data
+  );
+
+  return response.data;
+};
+
+export const deleteProject = async (
+  projectId: string
+) => {
+  const response = await api.delete(
+    `/projects/${projectId}`
   );
 
   return response.data;
@@ -40,16 +65,11 @@ export const createProject = async (
 export const getProjectTasks = async (
   projectId: string
 ) => {
-  const token = localStorage.getItem("token");
+  const response = await api.get("/tasks", {
+    params: {
+      project: projectId,
+    },
+  });
 
-  const response = await axios.get(
-    `${API_URL}/${projectId}/tasks`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  return response.data;
+  return response.data.tasks ?? response.data;
 };

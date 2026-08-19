@@ -8,12 +8,24 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleLogin = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
 
+    setError("");
+
+    if (!email || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
     try {
+      setLoading(true);
+
       const data = await loginUser(
         email,
         password
@@ -24,17 +36,22 @@ export default function Login() {
         data.token
       );
 
-      alert("Login Successful");
-
       navigate("/dashboard");
-    } catch (error) {
-      alert("Login Failed");
+    } catch (error: any) {
       console.error(error);
+
+      const message =
+        error?.response?.data?.message ||
+        "Login failed. Please check your credentials.";
+
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-6">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-6">
 
       <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-10">
 
@@ -45,6 +62,12 @@ export default function Login() {
         <p className="mt-2 text-zinc-400">
           Login to continue using DevForge.
         </p>
+
+        {error && (
+          <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-4 text-sm text-red-400">
+            {error}
+          </div>
+        )}
 
         <form
           onSubmit={handleLogin}
@@ -73,9 +96,10 @@ export default function Login() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-500"
+            disabled={loading}
+            className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
 
         </form>

@@ -1,62 +1,125 @@
-import { Response } from "express";
+import { Request, Response, NextFunction } from "express";
 
-import Project from "../models/Project";
-import Task from "../models/Task";
-
-import { AuthRequest } from "../middleware/authMiddleware";
+import {
+  createProject as createProjectService,
+  getProjectsByOwner,
+  getProjectById,
+  updateProject as updateProjectService,
+  deleteProject as deleteProjectService,
+} from "../services/projectService";
 
 export const createProject = async (
-  req: AuthRequest,
-  res: Response
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
   try {
     const { name, description } = req.body;
 
-    const project = await Project.create({
+    const owner = (req as any).userId;
+
+    const project = await createProjectService(
       name,
       description,
-      owner: req.userId,
-    });
+      owner
+    );
 
     res.status(201).json(project);
-  } catch {
-    res.status(500).json({
-      message: "Server Error",
-    });
+  } catch (error) {
+    next(error);
   }
 };
 
 export const getProjects = async (
-  req: AuthRequest,
-  res: Response
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
   try {
-    const projects = await Project.find({
-      owner: req.userId,
-    });
+    const owner = (req as any).userId;
 
-    res.json(projects);
-  } catch {
-    res.status(500).json({
-      message: "Server Error",
-    });
+    const projects = await getProjectsByOwner(owner);
+
+    res.status(200).json(projects);
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getProjectTasks = async (
-  req: AuthRequest,
-  res: Response
+export const getProject = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
 ) => {
   try {
-    const tasks = await Task.find({
-      project: req.params.id,
-      owner: req.userId,
-    });
+    const owner = (req as any).userId;
 
-    res.json(tasks);
-  } catch {
-    res.status(500).json({
-      message: "Server Error",
+    const project = await getProjectById(
+      req.params.id,
+      owner
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+      });
+    }
+
+    res.status(200).json(project);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProject = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const owner = (req as any).userId;
+
+    const project = await updateProjectService(
+      req.params.id,
+      owner,
+      req.body
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+      });
+    }
+
+    res.status(200).json(project);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteProject = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const owner = (req as any).userId;
+
+    const project = await deleteProjectService(
+      req.params.id,
+      owner
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Project deleted successfully",
     });
+  } catch (error) {
+    next(error);
   }
 };
