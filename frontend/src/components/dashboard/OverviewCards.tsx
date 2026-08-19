@@ -7,13 +7,18 @@ import {
   Users,
 } from "lucide-react";
 
-import { getProjects } from "../../services/projectService";
+import {
+  getProjects,
+} from "../../services/projectService";
+
 import {
   getTasks,
   type Task,
 } from "../../services/taskService";
 
-import api from "../../api/axios";
+import {
+  getTeams,
+} from "../../services/teamService";
 
 export default function OverviewCards() {
   const [projectCount, setProjectCount] =
@@ -26,113 +31,90 @@ export default function OverviewCards() {
     useState(0);
 
   const [teamMemberCount, setTeamMemberCount] =
-    useState(1);
+    useState(0);
 
   const [loading, setLoading] =
     useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
 
-        const [
-          projects,
-          tasks,
-        ] = await Promise.all([
-          getProjects(),
-          getTasks(),
-        ]);
+      const [
+        projects,
+        tasks,
+        teams,
+      ] = await Promise.all([
+        getProjects(),
+        getTasks(),
+        getTeams(),
+      ]);
 
-        setProjectCount(
-          projects.length
-        );
+      /* ================================
+         PROJECTS
+      ================================= */
 
-        setCompletedCount(
-          tasks.filter(
-            (task: Task) =>
-              task.status === "done"
-          ).length
-        );
+      setProjectCount(
+        projects.length
+      );
 
-        setPendingCount(
-          tasks.filter(
-            (task: Task) =>
-              task.status !== "done"
-          ).length
-        );
+      /* ================================
+         TASKS
+      ================================= */
 
-        /*
-         * Try to get the user's team/member
-         * information if the endpoint exists.
-         */
-        try {
-          const response =
-            await api.get(
-              "/teams"
-            );
+      setCompletedCount(
+        tasks.filter(
+          (task: Task) =>
+            task.status === "done"
+        ).length
+      );
 
-          if (
-            Array.isArray(
-              response.data
-            )
-          ) {
-            const uniqueUsers =
-              new Set<string>();
+      setPendingCount(
+        tasks.filter(
+          (task: Task) =>
+            task.status !== "done"
+        ).length
+      );
 
-            response.data.forEach(
-              (team: any) => {
-                if (
-                  Array.isArray(
-                    team.members
-                  )
-                ) {
-                  team.members.forEach(
-                    (member: any) => {
-                      const memberId =
-                        typeof member ===
-                        "string"
-                          ? member
-                          : member?._id;
+      /* ================================
+         TEAM MEMBERS
+      ================================= */
 
-                      if (memberId) {
-                        uniqueUsers.add(
-                          memberId
-                        );
-                      }
-                    }
-                  );
-                }
-              }
-            );
+      const uniqueMembers =
+        new Set<string>();
 
-            if (
-              uniqueUsers.size >
-              0
-            ) {
-              setTeamMemberCount(
-                uniqueUsers.size
+      teams.forEach((team) => {
+        team.members?.forEach(
+          (member) => {
+            const userId =
+              typeof member.user === "string"
+                ? member.user
+                : member.user._id;
+
+            if (userId) {
+              uniqueMembers.add(
+                userId
               );
             }
           }
-        } catch {
-          /*
-           * Keep the fallback value
-           * if the team response isn't
-           * available.
-           */
-          setTeamMemberCount(1);
-        }
-      } catch (error) {
-        console.error(
-          "Failed to load dashboard data:",
-          error
         );
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
 
+      setTeamMemberCount(
+        uniqueMembers.size
+      );
+
+    } catch (error) {
+      console.error(
+        "Failed to load dashboard data:",
+        error
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -168,7 +150,7 @@ export default function OverviewCards() {
         return (
           <div
             key={card.title}
-            className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 transition hover:border-zinc-700"
+            className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
           >
 
             <div className="flex items-start justify-between">
@@ -187,14 +169,10 @@ export default function OverviewCards() {
 
               </div>
 
-              <div className="rounded-xl bg-blue-500/10 p-3">
-
-                <Icon
-                  size={28}
-                  className="text-blue-500"
-                />
-
-              </div>
+              <Icon
+                size={36}
+                className="text-blue-500"
+              />
 
             </div>
 
