@@ -1,15 +1,24 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
 import User from "../models/User";
 import { AuthRequest } from "../middleware/authMiddleware";
+
+/* ================================
+   REGISTER
+================================ */
 
 export const registerUser = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const { name, email, password } = req.body;
+    const {
+      name,
+      email,
+      password,
+    } = req.body;
 
     const existingUser =
       await User.findOne({ email });
@@ -21,9 +30,12 @@ export const registerUser = async (
     }
 
     const hashedPassword =
-      await bcrypt.hash(password, 10);
+      await bcrypt.hash(
+        password,
+        10
+      );
 
-    const user = await User.create({
+    await User.create({
       name,
       email,
       password: hashedPassword,
@@ -39,12 +51,19 @@ export const registerUser = async (
   }
 };
 
+/* ================================
+   LOGIN
+================================ */
+
 export const loginUser = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const { email, password } = req.body;
+    const {
+      email,
+      password,
+    } = req.body;
 
     const user =
       await User.findOne({ email });
@@ -79,6 +98,12 @@ export const loginUser = async (
 
     res.json({
       token,
+
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+      },
     });
   } catch {
     res.status(500).json({
@@ -87,14 +112,25 @@ export const loginUser = async (
   }
 };
 
+/* ================================
+   CURRENT USER
+================================ */
+
 export const getCurrentUser = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
     const user =
-      await User.findById(req.userId)
-      .select("-password");
+      await User.findById(
+        req.userId
+      ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
 
     res.json(user);
   } catch {
