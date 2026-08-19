@@ -70,28 +70,6 @@ function priorityColor(
   }
 }
 
-/* ================================
-   STATUS LABEL
-================================ */
-
-function statusLabel(
-  status: KanbanStatus
-) {
-  switch (status) {
-    case "todo":
-      return "Todo";
-
-    case "inprogress":
-      return "In Progress";
-
-    case "review":
-      return "Review";
-
-    case "done":
-      return "Done";
-  }
-}
-
 export default function KanbanColumn({
   title,
   status,
