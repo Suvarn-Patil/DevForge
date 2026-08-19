@@ -12,6 +12,7 @@ import Topbar from "../components/dashboard/Topbar";
 
 import {
   getTaskById,
+  updateTask,
   updateTaskStatus,
   deleteTask,
   type Task,
@@ -32,6 +33,27 @@ export default function TaskDetails() {
 
   const [deleting, setDeleting] =
     useState(false);
+
+  const [editing, setEditing] =
+    useState(false);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [editTitle, setEditTitle] =
+    useState("");
+
+  const [editDescription, setEditDescription] =
+    useState("");
+
+  const [editPriority, setEditPriority] =
+    useState<
+      "low" | "medium" | "high"
+    >("medium");
+
+  /* ================================
+     FETCH TASK
+  ================================= */
 
   const fetchTask = async () => {
     if (!id) return;
@@ -62,6 +84,86 @@ export default function TaskDetails() {
     fetchTask();
   }, [id]);
 
+  /* ================================
+     START EDITING
+  ================================= */
+
+  const startEditing = () => {
+    if (!task) return;
+
+    setEditTitle(task.title);
+
+    setEditDescription(
+      task.description || ""
+    );
+
+    setEditPriority(task.priority);
+
+    setEditing(true);
+
+    setError("");
+  };
+
+  /* ================================
+     CANCEL EDITING
+  ================================= */
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setError("");
+  };
+
+  /* ================================
+     SAVE TASK
+  ================================= */
+
+  const handleSave = async () => {
+    if (!task) return;
+
+    if (!editTitle.trim()) {
+      setError(
+        "Task title is required."
+      );
+
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const updated =
+        await updateTask(
+          task._id,
+          {
+            title: editTitle.trim(),
+            description:
+              editDescription.trim(),
+            priority: editPriority,
+          }
+        );
+
+      setTask(updated);
+
+      setEditing(false);
+    } catch (error) {
+      console.error(
+        "Failed to update task:",
+        error
+      );
+
+      setError(
+        "Failed to update task."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ================================
+     UPDATE STATUS
+  ================================= */
+
   const handleStatusChange =
     async (
       status:
@@ -73,6 +175,8 @@ export default function TaskDetails() {
       if (!task) return;
 
       try {
+        setError("");
+
         const updated =
           await updateTaskStatus(
             task._id,
@@ -91,6 +195,10 @@ export default function TaskDetails() {
         );
       }
     };
+
+  /* ================================
+     DELETE TASK
+  ================================= */
 
   const handleDelete = async () => {
     if (!task) return;
@@ -124,6 +232,10 @@ export default function TaskDetails() {
     }
   };
 
+  /* ================================
+     PROJECT NAME
+  ================================= */
+
   const projectName =
     typeof task?.project ===
     "string"
@@ -131,26 +243,40 @@ export default function TaskDetails() {
       : task?.project?.name ??
         "Unknown Project";
 
+  /* ================================
+     LOADING
+  ================================= */
+
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white">
+
         <Topbar />
 
         <main className="p-8">
+
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-10 text-center text-zinc-400">
             Loading task...
           </div>
+
         </main>
+
       </div>
     );
   }
 
+  /* ================================
+     NOT FOUND
+  ================================= */
+
   if (!task) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white">
+
         <Topbar />
 
         <main className="p-8">
+
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-8 text-center text-red-400">
             {error ||
               "Task not found."}
@@ -164,7 +290,9 @@ export default function TaskDetails() {
           >
             ← Back to Kanban
           </button>
+
         </main>
+
       </div>
     );
   }
@@ -176,9 +304,11 @@ export default function TaskDetails() {
 
       <main className="p-8">
 
-        {/* HEADER */}
+        {/* ================================
+            HEADER
+        ================================= */}
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col justify-between gap-4 md:flex-row">
 
           <div>
 
@@ -191,9 +321,29 @@ export default function TaskDetails() {
               ← Back to Kanban
             </button>
 
-            <h1 className="text-4xl font-bold">
-              {task.title}
-            </h1>
+            {editing ? (
+
+              <div className="max-w-3xl">
+
+                <input
+                  value={editTitle}
+                  onChange={(e) =>
+                    setEditTitle(
+                      e.target.value
+                    )
+                  }
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-3xl font-bold text-white outline-none focus:border-blue-500"
+                />
+
+              </div>
+
+            ) : (
+
+              <h1 className="text-4xl font-bold">
+                {task.title}
+              </h1>
+
+            )}
 
             <p className="mt-2 text-zinc-400">
               Task Details
@@ -201,19 +351,67 @@ export default function TaskDetails() {
 
           </div>
 
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-          >
-            {deleting
-              ? "Deleting..."
-              : "Delete Task"}
-          </button>
+          <div className="flex gap-3">
+
+            {!editing && (
+              <button
+                onClick={
+                  startEditing
+                }
+                className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-500"
+              >
+                Edit Task
+              </button>
+            )}
+
+            {editing && (
+              <>
+                <button
+                  onClick={
+                    cancelEditing
+                  }
+                  disabled={saving}
+                  className="rounded-xl bg-zinc-700 px-5 py-3 font-semibold text-white hover:bg-zinc-600 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={
+                    handleSave
+                  }
+                  disabled={
+                    saving ||
+                    !editTitle.trim()
+                  }
+                  className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                >
+                  {saving
+                    ? "Saving..."
+                    : "Save Changes"}
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={
+                handleDelete
+              }
+              disabled={deleting}
+              className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+            >
+              {deleting
+                ? "Deleting..."
+                : "Delete Task"}
+            </button>
+
+          </div>
 
         </div>
 
-        {/* ERROR */}
+        {/* ================================
+            ERROR
+        ================================= */}
 
         {error && (
           <div className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
@@ -221,11 +419,15 @@ export default function TaskDetails() {
           </div>
         )}
 
-        {/* CONTENT */}
+        {/* ================================
+            CONTENT
+        ================================= */}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
 
-          {/* LEFT */}
+          {/* ================================
+              LEFT
+          ================================= */}
 
           <div className="space-y-6 lg:col-span-2">
 
@@ -237,10 +439,30 @@ export default function TaskDetails() {
                 Description
               </h2>
 
-              <p className="mt-4 whitespace-pre-wrap leading-7 text-zinc-400">
-                {task.description ||
-                  "No description provided."}
-              </p>
+              {editing ? (
+
+                <textarea
+                  value={
+                    editDescription
+                  }
+                  onChange={(e) =>
+                    setEditDescription(
+                      e.target.value
+                    )
+                  }
+                  rows={7}
+                  placeholder="Task description..."
+                  className="mt-4 w-full resize-none rounded-xl border border-zinc-700 bg-zinc-950 p-4 leading-7 text-white outline-none focus:border-blue-500"
+                />
+
+              ) : (
+
+                <p className="mt-4 whitespace-pre-wrap leading-7 text-zinc-400">
+                  {task.description ||
+                    "No description provided."}
+                </p>
+
+              )}
 
             </section>
 
@@ -324,7 +546,9 @@ export default function TaskDetails() {
 
           </div>
 
-          {/* RIGHT */}
+          {/* ================================
+              RIGHT
+          ================================= */}
 
           <div className="space-y-6">
 
@@ -360,22 +584,60 @@ export default function TaskDetails() {
                     Priority
                   </p>
 
-                  <span
-                    className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${
-                      task.priority ===
-                      "high"
-                        ? "bg-red-500/15 text-red-400"
-                        : task.priority ===
-                          "medium"
-                        ? "bg-yellow-500/15 text-yellow-400"
-                        : "bg-green-500/15 text-green-400"
-                    }`}
-                  >
-                    {task.priority
-                      .charAt(0)
-                      .toUpperCase() +
-                      task.priority.slice(1)}
-                  </span>
+                  {editing ? (
+
+                    <select
+                      value={
+                        editPriority
+                      }
+                      onChange={(e) =>
+                        setEditPriority(
+                          e.target
+                            .value as
+                            | "low"
+                            | "medium"
+                            | "high"
+                        )
+                      }
+                      className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+                    >
+
+                      <option value="low">
+                        Low
+                      </option>
+
+                      <option value="medium">
+                        Medium
+                      </option>
+
+                      <option value="high">
+                        High
+                      </option>
+
+                    </select>
+
+                  ) : (
+
+                    <span
+                      className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                        task.priority ===
+                        "high"
+                          ? "bg-red-500/15 text-red-400"
+                          : task.priority ===
+                            "medium"
+                          ? "bg-yellow-500/15 text-yellow-400"
+                          : "bg-green-500/15 text-green-400"
+                      }`}
+                    >
+                      {task.priority
+                        .charAt(0)
+                        .toUpperCase() +
+                        task.priority.slice(
+                          1
+                        )}
+                    </span>
+
+                  )}
 
                 </div>
 
@@ -388,21 +650,31 @@ export default function TaskDetails() {
                   </p>
 
                   {task.assignee ? (
+
                     <div className="mt-2">
 
                       <p className="text-sm font-medium text-white">
-                        {task.assignee.name}
+                        {
+                          task.assignee
+                            .name
+                        }
                       </p>
 
                       <p className="text-xs text-zinc-500">
-                        {task.assignee.email}
+                        {
+                          task.assignee
+                            .email
+                        }
                       </p>
 
                     </div>
+
                   ) : (
+
                     <p className="mt-1 text-sm text-zinc-500">
                       Unassigned
                     </p>
+
                   )}
 
                 </div>
