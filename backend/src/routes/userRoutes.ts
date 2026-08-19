@@ -3,6 +3,7 @@ import express from "express";
 import {
   getCurrentUser,
   updateCurrentUser,
+  changePassword,
   searchUsers,
 } from "../controllers/userController";
 
@@ -27,6 +28,16 @@ router.patch(
   "/me",
   protect,
   updateCurrentUser
+);
+
+/* ================================
+   PASSWORD
+================================ */
+
+router.patch(
+  "/me/password",
+  protect,
+  changePassword
 );
 
 /* ================================

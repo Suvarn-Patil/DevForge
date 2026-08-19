@@ -3,6 +3,8 @@ import {
   NextFunction,
 } from "express";
 
+import bcrypt from "bcryptjs";
+
 import {
   AuthRequest,
 } from "../middleware/authMiddleware";
@@ -33,9 +35,7 @@ export const getCurrentUser =
       const user =
         await User.findById(
           req.userId
-        ).select(
-          "-password"
-        );
+        ).select("-password");
 
       if (!user) {
         return res.status(404).json({
@@ -43,9 +43,7 @@ export const getCurrentUser =
         });
       }
 
-      res.status(200).json(
-        user
-      );
+      res.status(200).json(user);
     } catch (error) {
       next(error);
     }
@@ -76,8 +74,7 @@ export const updateCurrentUser =
 
       if (!name) {
         return res.status(400).json({
-          message:
-            "Name is required",
+          message: "Name is required",
         });
       }
 
@@ -91,8 +88,66 @@ export const updateCurrentUser =
             new: true,
             runValidators: true,
           }
-        ).select(
-          "-password"
+        ).select("-password");
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      }
+
+      res.status(200).json(user);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+/* ================================
+   CHANGE PASSWORD
+================================ */
+
+export const changePassword =
+  async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const {
+        currentPassword,
+        newPassword,
+      } = req.body;
+
+      if (
+        typeof currentPassword !==
+          "string" ||
+        typeof newPassword !==
+          "string"
+      ) {
+        return res.status(400).json({
+          message:
+            "Current password and new password are required",
+        });
+      }
+
+      if (
+        newPassword.length < 6
+      ) {
+        return res.status(400).json({
+          message:
+            "New password must be at least 6 characters",
+        });
+      }
+
+      const user =
+        await User.findById(
+          req.userId
         );
 
       if (!user) {
@@ -101,9 +156,34 @@ export const updateCurrentUser =
         });
       }
 
-      res.status(200).json(
-        user
-      );
+      const passwordMatches =
+        await bcrypt.compare(
+          currentPassword,
+          user.password
+        );
+
+      if (!passwordMatches) {
+        return res.status(400).json({
+          message:
+            "Current password is incorrect",
+        });
+      }
+
+      const hashedPassword =
+        await bcrypt.hash(
+          newPassword,
+          10
+        );
+
+      user.password =
+        hashedPassword;
+
+      await user.save();
+
+      res.status(200).json({
+        message:
+          "Password changed successfully",
+      });
     } catch (error) {
       next(error);
     }
@@ -141,9 +221,7 @@ export const searchUsers =
           search
         );
 
-      res.status(200).json(
-        users
-      );
+      res.status(200).json(users);
     } catch (error) {
       next(error);
     }
