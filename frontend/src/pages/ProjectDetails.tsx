@@ -1,16 +1,7 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
-
-import {
-  getProjectTasks,
-} from "../services/projectService";
+import { getProjectTasks } from "../services/projectService";
 
 import {
   createTask,
@@ -19,66 +10,64 @@ import {
   type Task,
 } from "../services/taskService";
 
+import { getProjectActivities } from "../services/activityService";
+
 import {
-  createComment,
   getComments,
+  createComment,
   updateComment,
   deleteComment,
   type Comment,
 } from "../services/commentService";
 
-import {
-  getProjectActivities,
-  type Activity,
-} from "../services/activityService";
+type Activity = {
+  _id: string;
+  description: string;
+  createdAt?: string;
+  user?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+  };
+  task?:
+    | string
+    | {
+        _id: string;
+        title: string;
+      };
+};
 
 export default function ProjectDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [tasks, setTasks] =
-    useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+
+  const [error, setError] = useState("");
 
   const [activities, setActivities] =
     useState<Activity[]>([]);
 
-  const [title, setTitle] =
-    useState("");
-
-  const [description, setDescription] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(true);
-
   const [activityLoading, setActivityLoading] =
-    useState(true);
-
-  const [creating, setCreating] =
     useState(false);
 
-  const [error, setError] =
-    useState("");
-
   const [comments, setComments] =
-    useState<
-      Record<string, Comment[]>
-    >({});
-
-  const [commentText, setCommentText] =
-    useState<
-      Record<string, string>
-    >({});
+    useState<Record<string, Comment[]>>({});
 
   const [commentLoading, setCommentLoading] =
-    useState<
-      Record<string, boolean>
-    >({});
+    useState<Record<string, boolean>>({});
+
+  const [commentText, setCommentText] =
+    useState<Record<string, string>>({});
 
   const [commentSubmitting, setCommentSubmitting] =
-    useState<
-      Record<string, boolean>
-    >({});
+    useState<Record<string, boolean>>({});
 
   const [editingComment, setEditingComment] =
     useState<string | null>(null);
@@ -99,8 +88,7 @@ export default function ProjectDetails() {
       setLoading(true);
       setError("");
 
-      const data =
-        await getProjectTasks(id);
+      const data = await getProjectTasks(id);
 
       setTasks(data);
     } catch (error) {
@@ -206,6 +194,7 @@ export default function ProjectDetails() {
       setError(
         "Task title is required."
       );
+
       return;
     }
 
@@ -512,6 +501,16 @@ export default function ProjectDetails() {
       }
     };
 
+  /* ================================
+     OPEN TASK DETAILS
+  ================================= */
+
+  const handleOpenTask = (
+    taskId: string
+  ) => {
+    navigate(`/tasks/${taskId}`);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
 
@@ -625,10 +624,13 @@ export default function ProjectDetails() {
           </h2>
 
           {loading ? (
+
             <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
               Loading tasks...
             </div>
+
           ) : tasks.length === 0 ? (
+
             <div className="mt-6 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 p-10 text-center">
 
               <h3 className="text-xl font-semibold text-white">
@@ -641,7 +643,9 @@ export default function ProjectDetails() {
               </p>
 
             </div>
+
           ) : (
+
             <div className="mt-6 space-y-5">
 
               {tasks.map((task) => {
@@ -652,6 +656,7 @@ export default function ProjectDetails() {
                   ] || [];
 
                 return (
+
                   <div
                     key={task._id}
                     className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
@@ -663,14 +668,34 @@ export default function ProjectDetails() {
 
                       <div>
 
-                        <h3 className="text-xl font-semibold text-white">
+                        {/* CLICKABLE TASK TITLE */}
+
+                        <button
+                          onClick={() =>
+                            handleOpenTask(
+                              task._id
+                            )
+                          }
+                          className="text-left text-xl font-semibold text-white transition hover:text-blue-400"
+                        >
                           {task.title}
-                        </h3>
+                        </button>
 
                         <p className="mt-2 text-zinc-400">
                           {task.description ||
                             "No description provided."}
                         </p>
+
+                        <button
+                          onClick={() =>
+                            handleOpenTask(
+                              task._id
+                            )
+                          }
+                          className="mt-3 text-sm text-blue-400 hover:text-blue-300"
+                        >
+                          View Task Details →
+                        </button>
 
                       </div>
 
@@ -762,21 +787,26 @@ export default function ProjectDetails() {
                       {commentLoading[
                         task._id
                       ] ? (
+
                         <div className="mt-4 text-sm text-zinc-500">
                           Loading comments...
                         </div>
-                      ) : taskComments.length ===
-                        0 ? (
+
+                      ) : taskComments.length === 0 ? (
+
                         <div className="mt-4 rounded-xl border border-dashed border-zinc-800 p-5 text-center text-sm text-zinc-500">
                           No comments yet.
                           Start the
                           conversation.
                         </div>
+
                       ) : (
+
                         <div className="mt-4 space-y-3">
 
                           {taskComments.map(
                             (comment) => (
+
                               <div
                                 key={
                                   comment._id
@@ -850,10 +880,12 @@ export default function ProjectDetails() {
                                 )}
 
                               </div>
+
                             )
                           )}
 
                         </div>
+
                       )}
 
                       <div className="mt-5">
@@ -913,10 +945,12 @@ export default function ProjectDetails() {
                     </div>
 
                   </div>
+
                 );
               })}
 
             </div>
+
           )}
 
         </div>
@@ -930,6 +964,7 @@ export default function ProjectDetails() {
           <div className="flex items-center justify-between">
 
             <div>
+
               <h2 className="text-2xl font-semibold text-white">
                 Activity History
               </h2>
@@ -937,10 +972,13 @@ export default function ProjectDetails() {
               <p className="mt-1 text-sm text-zinc-500">
                 Recent activity in this project.
               </p>
+
             </div>
 
             <button
-              onClick={fetchActivities}
+              onClick={
+                fetchActivities
+              }
               className="text-sm text-zinc-500 hover:text-white"
             >
               Refresh
@@ -949,14 +987,19 @@ export default function ProjectDetails() {
           </div>
 
           {activityLoading ? (
+
             <div className="mt-6 text-center text-zinc-500">
               Loading activity...
             </div>
+
           ) : activities.length === 0 ? (
+
             <div className="mt-6 rounded-xl border border-dashed border-zinc-800 p-8 text-center text-zinc-500">
               No activity yet.
             </div>
+
           ) : (
+
             <div className="relative mt-6">
 
               <div className="absolute left-2 top-2 bottom-2 w-px bg-zinc-800" />
@@ -965,6 +1008,7 @@ export default function ProjectDetails() {
 
                 {activities.map(
                   (activity) => (
+
                     <div
                       key={
                         activity._id
@@ -977,12 +1021,15 @@ export default function ProjectDetails() {
                       <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
 
                         <p className="text-sm font-medium text-white">
-                          {activity.description}
+                          {
+                            activity.description
+                          }
                         </p>
 
                         {activity.task &&
                           typeof activity.task !==
                             "string" && (
+
                             <p className="mt-1 text-xs text-zinc-500">
                               Task:{" "}
                               {
@@ -991,6 +1038,7 @@ export default function ProjectDetails() {
                                   .title
                               }
                             </p>
+
                           )}
 
                         <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-600">
@@ -1002,7 +1050,9 @@ export default function ProjectDetails() {
 
                           {activity.createdAt && (
                             <>
-                              <span>•</span>
+                              <span>
+                                •
+                              </span>
 
                               <span>
                                 {new Date(
@@ -1017,12 +1067,14 @@ export default function ProjectDetails() {
                       </div>
 
                     </div>
+
                   )
                 )}
 
               </div>
 
             </div>
+
           )}
 
         </div>
@@ -1034,6 +1086,7 @@ export default function ProjectDetails() {
       ================================= */}
 
       {editingComment && (
+
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
 
           <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
@@ -1108,6 +1161,7 @@ export default function ProjectDetails() {
           </div>
 
         </div>
+
       )}
 
     </div>
