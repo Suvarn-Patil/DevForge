@@ -6,6 +6,14 @@ import {
   AuthRequest,
 } from "../middleware/authMiddleware";
 
+import {
+  createActivity,
+} from "../services/activityService";
+
+/* ================================
+   CREATE TASK
+================================ */
+
 export const createTask = async (
   req: AuthRequest,
   res: Response
@@ -20,6 +28,12 @@ export const createTask = async (
       assignee,
     } = req.body;
 
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
     const task = await Task.create({
       title,
       description,
@@ -30,11 +44,25 @@ export const createTask = async (
       assignee: assignee || null,
     });
 
+    /* CREATE ACTIVITY */
+
+    await createActivity(
+      project,
+      req.userId,
+      "created_task",
+      `Created task "${title}"`,
+      task._id.toString()
+    );
+
     const populatedTask =
       await Task.findById(task._id)
         .populate(
           "assignee",
           "name email"
+        )
+        .populate(
+          "project",
+          "name"
         );
 
     res.status(201).json(
@@ -52,6 +80,10 @@ export const createTask = async (
   }
 };
 
+/* ================================
+   GET ALL TASKS
+================================ */
+
 export const getTasks = async (
   req: AuthRequest,
   res: Response
@@ -64,6 +96,10 @@ export const getTasks = async (
         .populate(
           "assignee",
           "name email"
+        )
+        .populate(
+          "project",
+          "name"
         )
         .sort({
           createdAt: -1,
@@ -133,12 +169,30 @@ export const updateTask = async (
   res: Response
 ) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
     const {
       title,
       description,
       priority,
       assignee,
     } = req.body;
+
+    const existingTask =
+      await Task.findOne({
+        _id: req.params.id,
+        owner: req.userId,
+      });
+
+    if (!existingTask) {
+      return res.status(404).json({
+        message: "Task not found",
+      });
+    }
 
     const updates: any = {};
 
@@ -187,7 +241,19 @@ export const updateTask = async (
       });
     }
 
-    res.status(200).json(task);
+    /* CREATE ACTIVITY */
+
+    await createActivity(
+      existingTask.project.toString(),
+      req.userId,
+      "updated_task",
+      `Updated task "${task.title}"`,
+      task._id.toString()
+    );
+
+    res.status(200).json(
+      task
+    );
   } catch (error) {
     console.error(
       "Update task error:",
@@ -210,8 +276,27 @@ export const updateTaskStatus =
     res: Response
   ) => {
     try {
-      const { status } =
-        req.body;
+      if (!req.userId) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      const {
+        status,
+      } = req.body;
+
+      const existingTask =
+        await Task.findOne({
+          _id: req.params.id,
+          owner: req.userId,
+        });
+
+      if (!existingTask) {
+        return res.status(404).json({
+          message: "Task not found",
+        });
+      }
 
       const task =
         await Task.findOneAndUpdate(
@@ -243,6 +328,31 @@ export const updateTaskStatus =
         });
       }
 
+      /* CREATE ACTIVITY */
+
+      const statusNames: Record<
+        string,
+        string
+      > = {
+        todo: "Todo",
+        inprogress:
+          "In Progress",
+        review: "Review",
+        done: "Done",
+      };
+
+      const statusLabel =
+        statusNames[status] ||
+        status;
+
+      await createActivity(
+        existingTask.project.toString(),
+        req.userId,
+        "changed_status",
+        `Moved task "${task.title}" to ${statusLabel}`,
+        task._id.toString()
+      );
+
       res.json(task);
     } catch (error) {
       console.error(
@@ -265,8 +375,14 @@ export const deleteTask = async (
   res: Response
 ) => {
   try {
+    if (!req.userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
     const task =
-      await Task.findOneAndDelete({
+      await Task.findOne({
         _id: req.params.id,
         owner: req.userId,
       });
@@ -276,6 +392,30 @@ export const deleteTask = async (
         message: "Task not found",
       });
     }
+
+    const taskTitle =
+      task.title;
+
+    const projectId =
+      task.project.toString();
+
+    const taskId =
+      task._id.toString();
+
+    await Task.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.userId,
+    });
+
+    /* CREATE ACTIVITY */
+
+    await createActivity(
+      projectId,
+      req.userId,
+      "deleted_task",
+      `Deleted task "${taskTitle}"`,
+      taskId
+    );
 
     res.json({
       message: "Task deleted",
