@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 import authRoutes from "./routes/authRoutes";
 import projectRoutes from "./routes/projectRoutes";
@@ -15,39 +17,42 @@ import { errorMiddleware } from "./middleware/errorMiddleware";
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://dev-forge-seven-rose.vercel.app",
+    ],
+    credentials: true,
+  })
+);
+
+app.use(helmet());
+
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+
+app.use(express.json({ limit: "1mb" }));
 
 // ===============================
 // ROUTES
 // ===============================
 
 app.use("/api/auth", authRoutes);
-
 app.use("/api/projects", projectRoutes);
-
 app.use("/api/tasks", taskRoutes);
-
 app.use("/api/teams", teamRoutes);
-
 app.use("/api/users", userRoutes);
-
 app.use("/api", commentRoutes);
-
-app.use(
-  "/api/notifications",
-  notificationRoutes
-);
-
-app.use(
-  "/api",
-  activityRoutes
-);
-
-app.use(
-  "/api/ai",
-  aiRoutes
-);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api", activityRoutes);
+app.use("/api/ai", aiRoutes);
 
 // ===============================
 // HEALTH CHECK
