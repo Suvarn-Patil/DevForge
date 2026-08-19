@@ -40,26 +40,21 @@ export default function Topbar() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<SearchUser[]>([]);
 
-  /* ================================
-     NOTIFICATIONS
-  ================================= */
-
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const notifications = await getNotifications(true);
         setUnreadCount(notifications.length);
       } catch (error) {
-        console.error("Failed to fetch notifications:", error);
+        console.error(
+          "Failed to fetch notifications:",
+          error
+        );
       }
     };
 
     fetchNotifications();
   }, []);
-
-  /* ================================
-     SEARCH
-  ================================= */
 
   useEffect(() => {
     const query = search.trim();
@@ -78,70 +73,76 @@ export default function Topbar() {
     const timer = setTimeout(async () => {
       const lowerQuery = query.toLowerCase();
 
-      /* ================================
-         PROJECT SEARCH
-      ================================= */
+      const [projectResult, taskResult, userResult] =
+        await Promise.allSettled([
+          getProjects(),
+          getTasks(),
+          searchUsers(query),
+        ]);
 
-      try {
-        const projectData = await getProjects();
+      if (projectResult.status === "fulfilled") {
+        const matchingProjects =
+          projectResult.value
+            .filter((project) => {
+              const name =
+                project.name?.toLowerCase() || "";
 
-        const matchingProjects = projectData
-          .filter((project: Project) => {
-            const name =
-              project.name?.toLowerCase() || "";
+              const description =
+                project.description?.toLowerCase() || "";
 
-            const description =
-              project.description?.toLowerCase() || "";
-
-            return (
-              name.includes(lowerQuery) ||
-              description.includes(lowerQuery)
-            );
-          })
-          .slice(0, 5);
+              return (
+                name.includes(lowerQuery) ||
+                description.includes(lowerQuery)
+              );
+            })
+            .slice(0, 5);
 
         setProjects(matchingProjects);
-      } catch (error) {
-        console.error("Project search failed:", error);
+      } else {
+        console.error(
+          "Project search failed:",
+          projectResult.reason
+        );
         setProjects([]);
       }
 
-      /* ================================
-         TASK SEARCH
-      ================================= */
+      if (taskResult.status === "fulfilled") {
+        const matchingTasks =
+          taskResult.value
+            .filter((task) => {
+              const title =
+                task.title?.toLowerCase() || "";
 
-      try {
-        const taskData = await getTasks();
+              const description =
+                task.description?.toLowerCase() || "";
 
-        const matchingTasks = taskData
-          .filter((task: Task) => {
-            const title =
-              task.title?.toLowerCase() || "";
-
-            return title.includes(lowerQuery);
-          })
-          .slice(0, 5);
+              return (
+                title.includes(lowerQuery) ||
+                description.includes(lowerQuery)
+              );
+            })
+            .slice(0, 5);
 
         setTasks(matchingTasks);
-      } catch (error) {
-        console.error("Task search failed:", error);
+      } else {
+        console.error(
+          "Task search failed:",
+          taskResult.reason
+        );
         setTasks([]);
       }
 
-      /* ================================
-         USER SEARCH
-      ================================= */
-
-      try {
-        const userData = await searchUsers(query);
-
+      if (userResult.status === "fulfilled") {
         setUsers(
-          Array.isArray(userData)
-            ? userData.slice(0, 5)
+          Array.isArray(userResult.value)
+            ? userResult.value.slice(0, 5)
             : []
         );
-      } catch (error) {
-        console.error("User search failed:", error);
+      } else {
+        console.error(
+          "User search failed:",
+          userResult.reason
+        );
         setUsers([]);
       }
 
@@ -151,10 +152,6 @@ export default function Topbar() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  /* ================================
-     CLEAR
-  ================================= */
-
   const clearSearch = () => {
     setSearch("");
     setSearchOpen(false);
@@ -162,10 +159,6 @@ export default function Topbar() {
     setTasks([]);
     setUsers([]);
   };
-
-  /* ================================
-     NAVIGATION
-  ================================= */
 
   const openProject = (id: string) => {
     clearSearch();
@@ -177,9 +170,10 @@ export default function Topbar() {
     navigate(`/tasks/${id}`);
   };
 
-  /* ================================
-     RESULTS
-  ================================= */
+  const openUser = () => {
+    clearSearch();
+    navigate("/profile");
+  };
 
   const hasResults =
     projects.length > 0 ||
@@ -211,6 +205,11 @@ export default function Topbar() {
                 setSearchOpen(true);
               }
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                clearSearch();
+              }
+            }}
             placeholder="Search projects, tasks, users..."
             className="w-full bg-transparent text-white outline-none placeholder:text-zinc-600"
           />
@@ -220,6 +219,7 @@ export default function Topbar() {
               type="button"
               onClick={clearSearch}
               className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-900 hover:text-white"
+              aria-label="Clear search"
             >
               <X size={17} />
             </button>
@@ -227,169 +227,153 @@ export default function Topbar() {
 
         </div>
 
-        {/* SEARCH DROPDOWN */}
-
         {searchOpen && search.trim() && (
-          <div className="absolute left-0 top-12 z-[100] w-full overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl">
+          <>
+            <div
+              className="fixed inset-0 z-[-1]"
+              onClick={() =>
+                setSearchOpen(false)
+              }
+            />
 
-            {/* SEARCHING */}
+            <div className="absolute left-0 top-12 z-[100] w-full overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl">
 
-            {searching && (
-              <div className="p-5 text-sm text-zinc-400">
-                Searching...
-              </div>
-            )}
+              {searching && (
+                <div className="p-5 text-sm text-zinc-400">
+                  Searching...
+                </div>
+              )}
 
-            {/* RESULTS */}
+              {!searching && hasResults && (
+                <>
+                  {projects.length > 0 && (
+                    <div className="border-b border-zinc-800">
 
-            {!searching && hasResults && (
+                      <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Projects
+                      </div>
 
-              <>
+                      {projects.map((project) => (
+                        <button
+                          key={project._id}
+                          type="button"
+                          onClick={() =>
+                            openProject(project._id)
+                          }
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800"
+                        >
+                          <div className="rounded-lg bg-blue-500/10 p-2">
+                            <FolderKanban
+                              size={18}
+                              className="text-blue-400"
+                            />
+                          </div>
 
-                {/* PROJECTS */}
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-white">
+                              {project.name}
+                            </p>
 
-                {projects.length > 0 && (
-                  <div className="border-b border-zinc-800">
+                            <p className="text-xs text-zinc-500">
+                              Project
+                            </p>
+                          </div>
+                        </button>
+                      ))}
 
-                    <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Projects
                     </div>
+                  )}
 
-                    {projects.map((project) => (
-                      <button
-                        key={project._id}
-                        type="button"
-                        onClick={() =>
-                          openProject(project._id)
-                        }
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800"
-                      >
+                  {tasks.length > 0 && (
+                    <div className="border-b border-zinc-800">
 
-                        <div className="rounded-lg bg-blue-500/10 p-2">
-                          <FolderKanban
-                            size={18}
-                            className="text-blue-400"
-                          />
-                        </div>
+                      <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Tasks
+                      </div>
 
-                        <div>
-                          <p className="font-medium text-white">
-                            {project.name}
-                          </p>
+                      {tasks.map((task) => (
+                        <button
+                          key={task._id}
+                          type="button"
+                          onClick={() =>
+                            openTask(task._id)
+                          }
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800"
+                        >
+                          <div className="rounded-lg bg-green-500/10 p-2">
+                            <CheckSquare
+                              size={18}
+                              className="text-green-400"
+                            />
+                          </div>
 
-                          <p className="text-xs text-zinc-500">
-                            Project
-                          </p>
-                        </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-white">
+                              {task.title}
+                            </p>
 
-                      </button>
-                    ))}
+                            <p className="text-xs text-zinc-500">
+                              Task
+                            </p>
+                          </div>
+                        </button>
+                      ))}
 
-                  </div>
-                )}
-
-                {/* TASKS */}
-
-                {tasks.length > 0 && (
-                  <div className="border-b border-zinc-800">
-
-                    <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Tasks
                     </div>
+                  )}
 
-                    {tasks.map((task) => (
-                      <button
-                        key={task._id}
-                        type="button"
-                        onClick={() =>
-                          openTask(task._id)
-                        }
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800"
-                      >
+                  {users.length > 0 && (
+                    <div>
 
-                        <div className="rounded-lg bg-green-500/10 p-2">
-                          <CheckSquare
-                            size={18}
-                            className="text-green-400"
-                          />
-                        </div>
+                      <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Users
+                      </div>
 
-                        <div>
-                          <p className="font-medium text-white">
-                            {task.title}
-                          </p>
+                      {users.map((user) => (
+                        <button
+                          key={user._id}
+                          type="button"
+                          onClick={openUser}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800"
+                        >
+                          <div className="rounded-lg bg-purple-500/10 p-2">
+                            <User
+                              size={18}
+                              className="text-purple-400"
+                            />
+                          </div>
 
-                          <p className="text-xs text-zinc-500">
-                            Task
-                          </p>
-                        </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-white">
+                              {user.name}
+                            </p>
 
-                      </button>
-                    ))}
+                            <p className="truncate text-xs text-zinc-500">
+                              {user.email}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
 
-                  </div>
-                )}
-
-                {/* USERS */}
-
-                {users.length > 0 && (
-                  <div>
-
-                    <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Users
                     </div>
+                  )}
+                </>
+              )}
 
-                    {users.map((user) => (
-                      <button
-                        key={user._id}
-                        type="button"
-                        onClick={clearSearch}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-800"
-                      >
+              {!searching && !hasResults && (
+                <div className="p-5">
+                  <p className="text-sm font-medium text-white">
+                    No results found
+                  </p>
 
-                        <div className="rounded-lg bg-purple-500/10 p-2">
-                          <User
-                            size={18}
-                            className="text-purple-400"
-                          />
-                        </div>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Try searching for a project, task, or user.
+                  </p>
+                </div>
+              )}
 
-                        <div>
-                          <p className="font-medium text-white">
-                            {user.name}
-                          </p>
-
-                          <p className="text-xs text-zinc-500">
-                            {user.email}
-                          </p>
-                        </div>
-
-                      </button>
-                    ))}
-
-                  </div>
-                )}
-
-              </>
-            )}
-
-            {/* NO RESULTS */}
-
-            {!searching && !hasResults && (
-              <div className="p-5">
-
-                <p className="text-sm font-medium text-white">
-                  No results found
-                </p>
-
-                <p className="mt-1 text-xs text-zinc-500">
-                  Try searching for a project, task, or user.
-                </p>
-
-              </div>
-            )}
-
-          </div>
+            </div>
+          </>
         )}
 
       </div>
@@ -400,7 +384,9 @@ export default function Topbar() {
 
         <button
           type="button"
-          onClick={() => navigate("/notifications")}
+          onClick={() =>
+            navigate("/notifications")
+          }
           className="relative rounded-xl p-2 hover:bg-zinc-900"
           aria-label="Notifications"
         >
@@ -418,11 +404,20 @@ export default function Topbar() {
           )}
         </button>
 
-        <img
-          src="https://i.pravatar.cc/100"
-          alt="avatar"
-          className="h-11 w-11 rounded-full"
-        />
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/profile")
+          }
+          className="rounded-full"
+          aria-label="Open profile"
+        >
+          <img
+            src="https://i.pravatar.cc/100"
+            alt="avatar"
+            className="h-11 w-11 rounded-full transition hover:ring-2 hover:ring-blue-500"
+          />
+        </button>
 
       </div>
 
